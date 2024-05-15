@@ -1,0 +1,22 @@
+Certainly! Here's the evaluation of the NER model's performance on the banking domain dataset in a tabular format:
+
+### Entity Analysis
+
+| Sentence                                         | True Entities                                                   | Predicted Entities                                              | True Positives (TP)                       | False Positives (FP)                 | False Negatives (FN)                |
+|--------------------------------------------------|-----------------------------------------------------------------|-----------------------------------------------------------------|------------------------------------------|-------------------------------------|-------------------------------------|
+| "John Doe transferred $500 to Jane Smith's account at Chase Bank." | John Doe (Person), $500 (Money), Jane Smith (Person), Chase Bank (Organization) | John Doe (Person), $500 (Money), Jane Smith (Person), Chase (Organization) | John Doe (Person), $500 (Money), Jane Smith (Person) | Chase (Organization)                | Chase Bank (Organization)           |
+| "Citibank approved a loan for Michael Johnson on April 10, 2023." | Citibank (Organization), Michael Johnson (Person), April 10, 2023 (Date) | Citibank (Organization), Michael Johnson (Person), April 10 (Date) | Citibank (Organization), Michael Johnson (Person) | None                                | April 10, 2023 (Date)               |
+| "The payment of €300 was made to HSBC on March 15." | €300 (Money), HSBC (Organization), March 15 (Date)               | 300 (Money), HSBC (Organization), March 15 (Date)               | HSBC (Organization), March 15 (Date)     | 300 (Money)                         | €300 (Money)                        |
+
+### Summary Metrics
+
+| Metric        | Value                      |
+|---------------|----------------------------|
+| True Positives (TP)   | 7                        |
+| False Positives (FP)  | 2                        |
+| False Negatives (FN)  | 3                        |
+| Precision             | 0.78 (7 / (7 + 2))       |
+| Recall                | 0.70 (7 / (7 + 3))       |
+| F1-Score              | 0.74 (2 * (0.78 * 0.70) / (0.78 + 0.70)) |
+
+This tabular format provides a clear and concise way to view the performance of the NER model on the given sentences, highlighting both correct identifications and errors.
