@@ -1,70 +1,63 @@
-To calculate the F1 score and micro F1 score for entailment verification using LLMs, follow these steps:
+To calculate the entailment ratio in large language models (LLMs), especially within the context of natural language inference (NLI), you need to follow a systematic process that involves evaluating the model's performance on labeled datasets. Here's a step-by-step guide using a hypothetical example:
 
-### Definitions:
-- **Precision:** The number of true positive (TP) entailment predictions divided by the total number of positive predictions (TP + FP).
-- **Recall:** The number of true positive (TP) entailment predictions divided by the total number of actual positives (TP + FN).
-- **F1 Score:** The harmonic mean of precision and recall.
-- **Micro F1 Score:** A measure that aggregates the contributions of all classes to compute the average F1 score.
+### Steps to Calculate Entailment Ratio
 
-### Example Data:
+1. **Prepare the Dataset**:
+   - Use an NLI dataset that includes pairs of premises and hypotheses with labels indicating whether the hypothesis is an entailment, contradiction, or neutral relative to the premise. Examples of such datasets are SNLI (Stanford Natural Language Inference) and MNLI (Multi-Genre Natural Language Inference).
 
-| Premise                        | Hypothesis                  | Ground Truth | Model Prediction |
-|--------------------------------|-----------------------------|--------------|------------------|
-| "The sky is clear."            | "It is not raining."        | Entailment   | Entailment       |
-| "She is reading a book."       | "She is studying."          | Neutral      | Neutral          |
-| "The ground is wet."           | "It has rained."            | Entailment   | Contradiction    |
-| "He is eating breakfast."      | "He is eating eggs."        | Neutral      | Entailment       |
-| "The cat is sleeping."         | "The cat is not awake."     | Entailment   | Entailment       |
+2. **Run Inference**:
+   - Use the LLM to predict the labels for each premise-hypothesis pair in the dataset.
 
-### Steps for Calculation:
+3. **Count Correct Predictions**:
+   - Compare the model's predictions to the ground truth labels to identify how many entailment predictions were correct.
 
-1. **Identify True Positives (TP), False Positives (FP), and False Negatives (FN):**
+4. **Calculate Entailment Ratio**:
+   - The entailment ratio is the proportion of correctly identified entailments out of the total number of premise-hypothesis pairs evaluated.
 
-   - **TP (Entailment):** Correctly predicted entailment pairs.
-     - Pairs: "The sky is clear." -> "It is not raining." and "The cat is sleeping." -> "The cat is not awake."
-     - Count: 2
-   - **FP (Entailment):** Pairs incorrectly predicted as entailment.
-     - Pair: "He is eating breakfast." -> "He is eating eggs."
-     - Count: 1
-   - **FN (Entailment):** Actual entailment pairs missed by the model.
-     - Pair: "The ground is wet." -> "It has rained."
-     - Count: 1
+### Formula
 
-2. **Calculate Precision and Recall for Entailment:**
+\[ \text{Entailment Ratio} = \frac{\text{Number of Correct Entailment Predictions}}{\text{Total Number of Premise-Hypothesis Pairs}} \]
 
-\[ \text{Precision} = \frac{TP}{TP + FP} = \frac{2}{2 + 1} = \frac{2}{3} \approx 0.67 \]
+### Example Calculation
 
-\[ \text{Recall} = \frac{TP}{TP + FN} = \frac{2}{2 + 1} = \frac{2}{3} \approx 0.67 \]
+Let's illustrate this with a simplified example:
 
-3. **Calculate F1 Score for Entailment:**
+#### Premises and Hypotheses:
 
-\[ \text{F1 Score} = 2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}} = 2 \times \frac{0.67 \times 0.67}{0.67 + 0.67} = 2 \times \frac{0.4489}{1.34} \approx 0.67 \]
+| Premise                            | Hypothesis                         | Ground Truth Label | Model Prediction |
+|------------------------------------|------------------------------------|--------------------|------------------|
+| "The bank is closed on Sundays."   | "The bank is not open on Sundays." | Entailment         | Entailment       |
+| "The customer deposited $500."     | "The customer withdrew $500."      | Contradiction      | Contradiction    |
+| "The ATM is out of service."       | "The ATM is not working."          | Entailment         | Neutral          |
+| "She has a savings account."       | "She has a checking account."      | Neutral            | Contradiction    |
+| "The loan was approved."           | "The loan was denied."             | Contradiction      | Contradiction    |
+| "Interest rates have increased."   | "Borrowing is more expensive now." | Entailment         | Entailment       |
 
-4. **Micro F1 Score Calculation:**
-   - The micro F1 score is calculated by considering all instances across classes.
-   - Compute total TP, FP, and FN across all classes and use these to calculate precision, recall, and F1.
+#### Calculation:
 
-   **Total TP:** 2 (Entailment) + 1 (Neutral) = 3
+1. **Correct Entailment Predictions**:
+   - True entailments correctly predicted: 2 (first and last rows).
 
-   **Total FP:** 1 (Entailment) + 0 (Neutral) = 1
+2. **Total Premise-Hypothesis Pairs**:
+   - Total pairs evaluated: 6.
 
-   **Total FN:** 1 (Entailment) + 0 (Neutral) = 1
+\[ \text{Entailment Ratio} = \frac{2}{6} = \frac{1}{3} \approx 0.33 \]
 
-   **Micro Precision:**
+### Summary
 
-\[ \text{Micro Precision} = \frac{\text{Total TP}}{\text{Total TP} + \text{Total FP}} = \frac{3}{3 + 1} = \frac{3}{4} = 0.75 \]
+- **Total Premise-Hypothesis Pairs**: 6
+- **Correct Entailment Predictions**: 2
+- **Entailment Ratio**: 0.33
 
-   **Micro Recall:**
+This entailment ratio indicates that the model correctly identified entailments in approximately 33% of the evaluated pairs. This metric is crucial for assessing the model's performance in NLI tasks, guiding improvements, and comparing against human performance or other models. 
 
-\[ \text{Micro Recall} = \frac{\text{Total TP}}{\text{Total TP} + \text{Total FN}} = \frac{3}{3 + 1} = \frac{3}{4} = 0.75 \]
+### Further Steps:
 
-   **Micro F1 Score:**
+1. **Evaluate on Larger Datasets**:
+   - Use comprehensive datasets like SNLI or MNLI for a more robust assessment.
 
-\[ \text{Micro F1} = 2 \times \frac{\text{Micro Precision} \times \text{Micro Recall}}{\text{Micro Precision} + \text{Micro Recall}} = 2 \times \frac{0.75 \times 0.75}{0.75 + 0.75} = 2 \times \frac{0.5625}{1.5} = 0.75 \]
+2. **Measure Other Metrics**:
+   - Besides entailment ratio, consider measuring precision, recall, and F1 score for a more detailed evaluation of the model's performance across all classes (entailment, contradiction, and neutral).
 
-### Summary:
-
-- **F1 Score (Entailment):** 0.67
-- **Micro F1 Score:** 0.75
-
-These calculations provide insights into the model's performance in identifying entailments correctly, balancing precision, and recall for a holistic evaluation.
+3. **Refine and Improve**:
+   - Based on the results, fine-tune the model to improve its understanding and inference capabilities, especially in domains where it underperforms.
