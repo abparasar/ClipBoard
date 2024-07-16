@@ -1,29 +1,59 @@
-import mechanicalsoup
+To calculate the Kolmogorov-Smirnov (KS) statistic, Gini coefficient, and Area Under the Curve (AUC) from your Excel data, you can use the following Python code. This code uses `pandas` for data manipulation and `scikit-learn` for computing AUC and Gini. You'll need to have these libraries installed (`pandas`, `scikit-learn`, `numpy`, and `openpyxl` for reading Excel files).
 
-# Create a browser object
-browser = mechanicalsoup.StatefulBrowser()
+First, make sure you have these libraries installed:
 
-# Open the website
-browser.open("https://example.com")
+```bash
+pip install pandas scikit-learn numpy openpyxl
+```
 
-# Select the form
-form = browser.select_form('form[id="form_id"]')
+Then, use the following Python script:
 
-# Select the dropdown option
-form.set_select({"dropdown_name": "option_value"})
+```python
+import pandas as pd
+import numpy as np
+from sklearn.metrics import roc_curve, auc
 
-# Submit the form (assuming the button is part of the form)
-browser.submit_selected()
+# Load the data
+file_path = 'x.xlsx'  # Make sure your file is named correctly
+sheet_name = 'y'
 
-# If the button is not part of the form, you can directly trigger the click
-# button = browser.get_current_page().find('button', {'id': 'button_id'})
-# browser.submit(button)
+df = pd.read_excel(file_path, sheet_name=sheet_name)
 
-# Get the resulting page content
-result_page = browser.get_current_page()
+# Assuming your dataframe has the following columns: 'score', 'good', 'fraud'
+# Calculate total good and fraud transactions
+total_good = df['good'].sum()
+total_fraud = df['fraud'].sum()
 
-# Do something with the result
-print(result_page.prettify())
+# Calculate cumulative good and fraud transactions
+df['cum_good'] = df['good'].cumsum()
+df['cum_fraud'] = df['fraud'].cumsum()
 
-# Close the browser
-browser.close()
+# Calculate KS statistic
+df['cum_good_perc'] = df['cum_good'] / total_good
+df['cum_fraud_perc'] = df['cum_fraud'] / total_fraud
+df['ks_statistic'] = df['cum_fraud_perc'] - df['cum_good_perc']
+ks_statistic = df['ks_statistic'].max()
+
+# Calculate AUC
+fpr, tpr, thresholds = roc_curve(df['fraud'], df['score'])
+roc_auc = auc(fpr, tpr)
+
+# Calculate Gini coefficient
+gini = 2 * roc_auc - 1
+
+print(f'KS Statistic: {ks_statistic}')
+print(f'AUC: {roc_auc}')
+print(f'Gini Coefficient: {gini}')
+```
+
+This script performs the following steps:
+
+1. Load the data from the Excel file.
+2. Calculate cumulative good and fraud transactions.
+3. Compute the KS statistic.
+4. Compute the ROC curve and AUC.
+5. Calculate the Gini coefficient.
+
+Make sure to replace `file_path` and `sheet_name` with your actual file and sheet names. Save the script as a `.py` file and run it in your Python environment.
+
+If you have any specific requirements for the columns or data structure, let me know, and I can adjust the code accordingly.
