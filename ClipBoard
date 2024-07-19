@@ -1,20 +1,24 @@
-To load and run a customized BERT-based intent classifier model, you can use the `transformers` library from Hugging Face. Here's a step-by-step guide to achieve this:
+Certainly! When using batch size during evaluation with a BERT-based intent classifier, it allows you to process multiple examples at once, making the evaluation more efficient. Here’s how you can perform batch processing during the evaluation phase:
 
-### 1. Install the Required Libraries
+### Step-by-Step Guide
 
-First, ensure you have the necessary libraries installed:
+### 1. Prepare Data in Batches
 
-```bash
-pip install transformers torch
-```
+First, you need to prepare your data into batches. This can be done using a DataLoader from PyTorch.
 
-### 2. Load the Customized BERT Model
+### 2. Define Evaluation Function
 
-Assuming you have fine-tuned your BERT model and saved it, you can load it using the following code:
+Define a function that will handle the evaluation process, including processing data in batches.
+
+### 3. Load and Evaluate the Model
+
+Here’s a complete example:
 
 ```python
 import torch
 from transformers import BertTokenizer, BertForSequenceClassification
+from torch.utils.data import DataLoader, TensorDataset
+import numpy as np
 
 # Load the tokenizer and model
 tokenizer = BertTokenizer.from_pretrained('path/to/your/customized-model')
@@ -23,55 +27,66 @@ model = BertForSequenceClassification.from_pretrained('path/to/your/customized-m
 # Move model to the appropriate device (GPU or CPU)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
-```
 
-### 3. Prepare the Input Data
-
-Tokenize your input sentences using the tokenizer:
-
-```python
-sentences = ["Sample sentence for intent classification"]
+# Example sentences for evaluation
+sentences = [
+    "Sample sentence for intent classification 1",
+    "Sample sentence for intent classification 2",
+    "Sample sentence for intent classification 3",
+    "Sample sentence for intent classification 4"
+]
 
 # Tokenize the input sentences
 inputs = tokenizer(sentences, return_tensors='pt', padding=True, truncation=True, max_length=128)
 
-# Move input tensors to the appropriate device
-inputs = {key: value.to(device) for key, value in inputs.items()}
-```
+# Create a dataset and dataloader
+dataset = TensorDataset(inputs['input_ids'], inputs['attention_mask'])
+dataloader = DataLoader(dataset, batch_size=2)
 
-### 4. Run the Model
+def evaluate(model, dataloader, device):
+    model.eval()
+    predictions = []
 
-Run the model to get predictions:
+    with torch.no_grad():
+        for batch in dataloader:
+            input_ids, attention_mask = [b.to(device) for b in batch]
 
-```python
-# Put the model in evaluation mode
-model.eval()
+            # Get model outputs
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits = outputs.logits
 
-with torch.no_grad():
-    outputs = model(**inputs)
-    
-# The model outputs logits, we can apply softmax to get probabilities
-logits = outputs.logits
-probabilities = torch.softmax(logits, dim=-1)
-predicted_class = torch.argmax(probabilities, dim=-1)
+            # Apply softmax to get probabilities
+            probs = torch.softmax(logits, dim=-1)
+            preds = torch.argmax(probs, dim=-1)
 
-print(f'Predicted class: {predicted_class.item()}')
-```
+            predictions.extend(preds.cpu().numpy())
 
-### 5. Interpreting Results
+    return np.array(predictions)
 
-Assuming your model has been fine-tuned for intent classification, the `predicted_class` will give you the index of the predicted intent. You can map this index to your intent labels.
+# Evaluate the model
+predicted_classes = evaluate(model, dataloader, device)
 
-```python
 # Assuming you have a list of labels
 labels = ["Intent_A", "Intent_B", "Intent_C"]
-predicted_label = labels[predicted_class.item()]
+predicted_labels = [labels[pred] for pred in predicted_classes]
 
-print(f'Predicted intent: {predicted_label}')
+print(f'Predicted intents: {predicted_labels}')
 ```
 
-### Note
+### Explanation:
 
-Replace `'path/to/your/customized-model'` with the actual path to your fine-tuned BERT model. The labels list should correspond to the classes you used during fine-tuning.
+1. **Prepare Data in Batches**:
+    - Tokenize the input sentences and create a `TensorDataset`.
+    - Use a `DataLoader` to handle batching.
 
-This script provides a basic example of loading and running a BERT intent classifier. Depending on your specific use case and the details of your model, you might need to adjust some parts of the code.
+2. **Evaluation Function**:
+    - Define an `evaluate` function that processes data in batches.
+    - The function sets the model to evaluation mode (`model.eval()`), and uses `torch.no_grad()` to disable gradient calculation.
+    - For each batch, move the tensors to the appropriate device, get model outputs, apply softmax to obtain probabilities, and determine the predicted classes.
+
+3. **Load and Evaluate the Model**:
+    - Load the tokenizer and model.
+    - Tokenize the evaluation sentences.
+    - Create a dataset and dataloader, then call the evaluation function to get predictions.
+
+By using this approach, you can efficiently handle larger datasets and take advantage of batch processing during evaluation.
