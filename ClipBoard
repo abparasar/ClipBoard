@@ -1,116 +1,77 @@
-Got it. Here is the full script for developing an intent classifier model using the BERT base uncased pre-trained model and utilizing GPU for training:
+To load and run a customized BERT-based intent classifier model, you can use the `transformers` library from Hugging Face. Here's a step-by-step guide to achieve this:
 
-### Step-by-Step Implementation
+### 1. Install the Required Libraries
 
-1. **Environment Setup**: Make sure you have the required libraries installed.
-2. **Data Preparation**: Load and preprocess your dataset.
-3. **Tokenization**: Tokenize the input texts.
-4. **Label Encoding**: Encode the target labels.
-5. **Dataset and DataLoader**: Create a custom dataset and DataLoader.
-6. **Model Preparation**: Load the pre-trained BERT model and configure it for classification.
-7. **Training**: Define and run the training loop.
-8. **Evaluation**: Evaluate the trained model.
-9. **Save the Model**: Save the trained model for future use.
+First, ensure you have the necessary libraries installed:
 
-### Complete Script
-
-```python
-import pandas as pd
-import torch
-from torch.utils.data import Dataset, DataLoader
-from transformers import BertTokenizer, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import classification_report
-import torch.nn.functional as F
-
-# Check GPU availability
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(f'Using device: {device}')
-
-# Load the data
-data = pd.read_csv('path_to_your_dataset.csv')
-utterances = data['utterance'].tolist()
-intents = data['intent'].tolist()
-
-# Load the tokenizer
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-
-# Tokenize the utterances
-tokens = tokenizer(utterances, padding=True, truncation=True, return_tensors='pt')
-
-# Encode the labels
-label_encoder = LabelEncoder()
-labels = label_encoder.fit_transform(intents)
-
-class IntentDataset(Dataset):
-    def __init__(self, tokens, labels):
-        self.tokens = tokens
-        self.labels = labels
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        item = {key: val[idx].to(device) for key, val in self.tokens.items()}
-        item['labels'] = torch.tensor(self.labels[idx]).to(device)
-        return item
-
-dataset = IntentDataset(tokens, labels)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-# Load the model and move to GPU
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(label_encoder.classes_))
-model.to(device)
-
-# Prepare the optimizer
-optimizer = AdamW(model.parameters(), lr=5e-5)
-
-# Scheduler
-epochs = 3
-total_steps = len(dataloader) * epochs
-scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
-
-# Training function
-def train(model, dataloader, optimizer, scheduler, epochs):
-    model.train()
-    for epoch in range(epochs):
-        for batch in dataloader:
-            optimizer.zero_grad()
-            outputs = model(**batch)
-            loss = outputs.loss
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-            print(f"Epoch {epoch+1}, Loss: {loss.item()}")
-
-# Train the model
-train(model, dataloader, optimizer, scheduler, epochs)
-
-# Evaluation function
-def evaluate(model, dataloader):
-    model.eval()
-    all_preds = []
-    all_labels = []
-    with torch.no_grad():
-        for batch in dataloader:
-            outputs = model(**batch)
-            logits = outputs.logits
-            preds = torch.argmax(F.softmax(logits, dim=-1), dim=-1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(batch['labels'].cpu().numpy())
-    return classification_report(all_labels, all_preds, target_names=label_encoder.classes_)
-
-# Evaluate the model
-print(evaluate(model, dataloader))
-
-# Save the trained model and tokenizer
-model.save_pretrained('path_to_save_model')
-tokenizer.save_pretrained('path_to_save_model')
+```bash
+pip install transformers torch
 ```
 
-### Notes:
-1. **Replace `'path_to_your_dataset.csv'`** with the actual path to your dataset.
-2. **Replace `'path_to_save_model'`** with the desired path to save the trained model and tokenizer.
-3. **Ensure you have sufficient GPU memory** to handle your dataset and model training.
+### 2. Load the Customized BERT Model
 
-This script takes advantage of GPU acceleration to train a BERT-based intent classifier for your chatbot. The training process prints the loss at each epoch, and the evaluation function provides a classification report for model performance assessment.
+Assuming you have fine-tuned your BERT model and saved it, you can load it using the following code:
+
+```python
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
+
+# Load the tokenizer and model
+tokenizer = BertTokenizer.from_pretrained('path/to/your/customized-model')
+model = BertForSequenceClassification.from_pretrained('path/to/your/customized-model')
+
+# Move model to the appropriate device (GPU or CPU)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model.to(device)
+```
+
+### 3. Prepare the Input Data
+
+Tokenize your input sentences using the tokenizer:
+
+```python
+sentences = ["Sample sentence for intent classification"]
+
+# Tokenize the input sentences
+inputs = tokenizer(sentences, return_tensors='pt', padding=True, truncation=True, max_length=128)
+
+# Move input tensors to the appropriate device
+inputs = {key: value.to(device) for key, value in inputs.items()}
+```
+
+### 4. Run the Model
+
+Run the model to get predictions:
+
+```python
+# Put the model in evaluation mode
+model.eval()
+
+with torch.no_grad():
+    outputs = model(**inputs)
+    
+# The model outputs logits, we can apply softmax to get probabilities
+logits = outputs.logits
+probabilities = torch.softmax(logits, dim=-1)
+predicted_class = torch.argmax(probabilities, dim=-1)
+
+print(f'Predicted class: {predicted_class.item()}')
+```
+
+### 5. Interpreting Results
+
+Assuming your model has been fine-tuned for intent classification, the `predicted_class` will give you the index of the predicted intent. You can map this index to your intent labels.
+
+```python
+# Assuming you have a list of labels
+labels = ["Intent_A", "Intent_B", "Intent_C"]
+predicted_label = labels[predicted_class.item()]
+
+print(f'Predicted intent: {predicted_label}')
+```
+
+### Note
+
+Replace `'path/to/your/customized-model'` with the actual path to your fine-tuned BERT model. The labels list should correspond to the classes you used during fine-tuning.
+
+This script provides a basic example of loading and running a BERT intent classifier. Depending on your specific use case and the details of your model, you might need to adjust some parts of the code.
