@@ -1,13 +1,13 @@
-import time
+import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
-from transformers import BertTokenizer, BertForSequenceClassification, AdamW, get_scheduler
+from transformers import BertTokenizer, BertForSequenceClassification, TrainingArguments, Trainer
 from sklearn.metrics import f1_score
-from sklearn.model_selection import train_test_split
-from transformers import TrainingArguments, Trainer
+from sklearn.model_selection import ParameterSampler
+import time
 
-# Define a custom dataset class
+# Define custom dataset class
 class IntentDataset(Dataset):
     def __init__(self, encodings, labels):
         self.encodings = encodings
@@ -22,62 +22,72 @@ class IntentDataset(Dataset):
         return len(self.labels)
 
 # Load data
-start_time = time.time()
 data = pd.read_parquet('expanded_dataframe.parquet')
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-encoding = tokenizer(data['Utterances'].tolist(), truncation=True, padding=True, return_tensors='pt')
-end_time = time.time()
-print(f"Tokenization time: {end_time - start_time} seconds")
-
-# Split data
 train_texts, test_texts, train_labels, test_labels = train_test_split(data['Utterances'], data['Expected Intent'], test_size=0.1)
 
+# Initialize tokenizer
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
 # Tokenize and encode
-start_time = time.time()
 train_encodings = tokenizer(train_texts.tolist(), truncation=True, padding=True, return_tensors='pt')
 test_encodings = tokenizer(test_texts.tolist(), truncation=True, padding=True, return_tensors='pt')
-end_time = time.time()
-print(f"Encoding time: {end_time - start_time} seconds")
 
 train_dataset = IntentDataset(train_encodings, train_labels.tolist())
 test_dataset = IntentDataset(test_encodings, test_labels.tolist())
 
-# Load model
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(data['Expected Intent'].unique()))
-model = model.to('cuda')  # Move model to GPU
+# Define hyperparameter space
+param_grid = {
+    'per_device_train_batch_size': [8, 16, 32],
+    'learning_rate': [1e-5, 2e-5, 5e-5],
+    'num_train_epochs': [2, 3, 4]
+}
 
-# Training arguments
-training_args = TrainingArguments(
-    per_device_train_batch_size=16,
-    per_device_eval_batch_size=16,
-    output_dir='./results',
-    num_train_epochs=3,
-    evaluation_strategy="steps",
-    logging_dir='./logs',
-    logging_steps=10,
-)
+# Random search
+best_score = 0
+best_params = None
+n_iter = 10  # Number of random configurations to sample
 
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=test_dataset,
-    compute_metrics=lambda p: {
-        'f1': f1_score(p.label_ids, p.predictions.argmax(axis=-1), average='macro'),
-        'f0.5': f1_score(p.label_ids, p.predictions.argmax(axis=-1), average='macro', beta=0.5)
-    }
-)
+for params in ParameterSampler(param_grid, n_iter=n_iter):
+    print(f"Trying parameters: {params}")
 
-# Train model
-start_time = time.time()
-trainer.train()
-end_time = time.time()
-print(f"Training time: {end_time - start_time} seconds")
+    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(data['Expected Intent'].unique()))
+    model = model.to('cuda')  # Move model to GPU
 
-# Evaluate model
-eval_results = trainer.evaluate()
-print(f"Micro F1: {eval_results['eval_f1']}")
-print(f"Macro F0.5: {eval_results['eval_f0.5']}")
+    training_args = TrainingArguments(
+        per_device_train_batch_size=params['per_device_train_batch_size'],
+        learning_rate=params['learning_rate'],
+        num_train_epochs=params['num_train_epochs'],
+        output_dir='./results',
+        evaluation_strategy="epoch",
+        logging_dir='./logs',
+    )
 
-# Save the model
-model.save_pretrained('./finetuned_bert_model')
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=test_dataset,
+        compute_metrics=lambda p: {
+            'f1': f1_score(p.label_ids, p.predictions.argmax(axis=-1), average='macro'),
+            'f0.5': f1_score(p.label_ids, p.predictions.argmax(axis=-1), average='macro', beta=0.5)
+        }
+    )
+
+    start_time = time.time()
+    trainer.train()
+    end_time = time.time()
+    print(f"Training time: {end_time - start_time} seconds")
+
+    eval_results = trainer.evaluate()
+    f1 = eval_results['eval_f1']
+    
+    if f1 > best_score:
+        best_score = f1
+        best_params = params
+        print(f"New best parameters found: {best_params}")
+
+print(f"Best score: {best_score}")
+print(f"Best parameters: {best_params}")
+
+# Save the best model
+model.save_pretrained('./best_finetuned_bert_model')
