@@ -1,13 +1,12 @@
-import pandas as pd
+import time
 
-# Assuming you have a DataFrame df with 15,000 rows
-df = pd.read_csv('your_dataframe.csv')  # Load your DataFrame if it's from a CSV file
+start_time = time.time()  # Record the start time
 
-# Calculate the number of times to repeat the DataFrame
-repeat_count = 1000000 // len(df)
+# Your code here
+for i in range(1000000):
+    pass  # Replace this with your code
 
-# Repeat the DataFrame
-df_expanded = pd.concat([df] * repeat_count, ignore_index=True)
+end_time = time.time()  # Record the end time
 
-# Save to a new CSV file (optional)
-df_expanded.to_csv('expanded_dataframe.csv', index=False)
+execution_time = end_time - start_time
+print(f"Execution time: {execution_time} seconds")
