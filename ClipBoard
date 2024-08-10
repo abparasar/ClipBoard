@@ -1,14 +1,13 @@
-import pandas as pd
+import torch
 
-# Example DataFrame
-df = pd.DataFrame({
-    'labels': ['class1', 'class2', 'class1', 'class3']
-})
+# Example mapping of string labels to integers
+label_map = {'class1': 0, 'class2': 1, 'class3': 2}
 
-# Step 1: Extract unique labels
-unique_labels = df['labels'].unique()
+# Convert string labels to integer labels
+numeric_labels = [label_map[label] for label in self.labels]
 
-# Step 2: Create a label map
-label_map = {label: idx for idx, label in enumerate(unique_labels)}
+# Access the label for the specific index
+label = numeric_labels[idx]
 
-print(label_map)
+# Create a tensor from the numeric label
+item['labels'] = torch.tensor(label)
