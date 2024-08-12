@@ -1,13 +1,16 @@
 import torch
+from transformers import BertForSequenceClassification
+from torchviz import make_dot
 
-# Example mapping of string labels to integers
-label_map = {'class1': 0, 'class2': 1, 'class3': 2}
+# Load the model
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased')
 
-# Convert string labels to integer labels
-numeric_labels = [label_map[label] for label in self.labels]
+# Create a dummy input tensor
+inputs = torch.ones((1, 10), dtype=torch.long)  # Batch size of 1, sequence length of 10
 
-# Access the label for the specific index
-label = numeric_labels[idx]
+# Perform a forward pass
+outputs = model(inputs)
 
-# Create a tensor from the numeric label
-item['labels'] = torch.tensor(label)
+# Generate the visualization
+dot = make_dot(outputs.logits, params=dict(model.named_parameters()))
+dot.render('bert_model_architecture', format='png')  # Save as PNG
