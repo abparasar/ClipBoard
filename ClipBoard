@@ -1,11 +1,21 @@
-my_dict = {'a': 1, 'b': 2, 'c': 3}
+\documentclass{article}
+\usepackage{pdfpages}
+\usepackage{graphicx}
 
-value_to_find = 2
-key_found = None
+\begin{document}
 
-for key, value in my_dict.items():
-    if value == value_to_find:
-        key_found = key
-        break
+\begin{figure}[h!]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includepdf[pages=-, scale=0.8, fitpaper=true]{path/to/first.pdf}
+        \caption{First PDF}
+    \end{minipage}\hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includepdf[pages=-, scale=0.8, fitpaper=true]{path/to/second.pdf}
+        \caption{Second PDF}
+    \end{minipage}
+\end{figure}
 
-print(key_found)  # Output: 'b'
+\end{document}
