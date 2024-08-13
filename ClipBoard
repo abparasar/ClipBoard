@@ -1,10 +1,11 @@
-from sklearn.metrics import accuracy_score, classification_report
+my_dict = {'a': 1, 'b': 2, 'c': 3}
 
-# Calculate accuracy
-accuracy = accuracy_score(true_intents, predicted_intents)
+value_to_find = 2
+key_found = None
 
-# Print classification report
-report = classification_report(true_intents, predicted_intents)
-print(f"Accuracy: {accuracy:.4f}")
-print("Classification Report:")
-print(report)
+for key, value in my_dict.items():
+    if value == value_to_find:
+        key_found = key
+        break
+
+print(key_found)  # Output: 'b'
