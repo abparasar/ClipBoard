@@ -1,10 +1,10 @@
-def predict_intents(encodings):
-    inputs = {key: val.to(device) for key, val in encodings.items()}
-    with torch.no_grad():
-        outputs = model(**inputs)
-    
-    # Get predicted class
-    predictions = torch.argmax(outputs.logits, dim=1)
-    return predictions.cpu().numpy()
+from sklearn.metrics import accuracy_score, classification_report
 
-predicted_intents = predict_intents(encodings)
+# Calculate accuracy
+accuracy = accuracy_score(true_intents, predicted_intents)
+
+# Print classification report
+report = classification_report(true_intents, predicted_intents)
+print(f"Accuracy: {accuracy:.4f}")
+print("Classification Report:")
+print(report)
