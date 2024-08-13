@@ -1,16 +1,10 @@
-import torch
-from transformers import BertForSequenceClassification
-from torchviz import make_dot
+def predict_intents(encodings):
+    inputs = {key: val.to(device) for key, val in encodings.items()}
+    with torch.no_grad():
+        outputs = model(**inputs)
+    
+    # Get predicted class
+    predictions = torch.argmax(outputs.logits, dim=1)
+    return predictions.cpu().numpy()
 
-# Load the model
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased')
-
-# Create a dummy input tensor
-inputs = torch.ones((1, 10), dtype=torch.long)  # Batch size of 1, sequence length of 10
-
-# Perform a forward pass
-outputs = model(inputs)
-
-# Generate the visualization
-dot = make_dot(outputs.logits, params=dict(model.named_parameters()))
-dot.render('bert_model_architecture', format='png')  # Save as PNG
+predicted_intents = predict_intents(encodings)
