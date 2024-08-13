@@ -1,9 +1,31 @@
+import pdfplumber
 import difflib
 
-with open('file1.txt', 'r') as f1, open('file2.txt', 'r') as f2:
-    text1 = f1.read().splitlines()
-    text2 = f2.read().splitlines()
+# Function to extract text from a PDF file
+def extract_text_from_pdf(pdf_path):
+    text = ''
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text()
+    return text
 
-d = difflib.Differ()
-diff = d.compare(text1, text2)
-print('\n'.join(diff))
+# Function to compare two texts and print differences
+def compare_texts(text1, text2):
+    d = difflib.Differ()
+    diff = d.compare(text1.splitlines(), text2.splitlines())
+    return '\n'.join(diff)
+
+# Paths to your PDF files
+pdf1_path = 'path/to/first.pdf'
+pdf2_path = 'path/to/second.pdf'
+
+# Extract text from PDFs
+text1 = extract_text_from_pdf(pdf1_path)
+text2 = extract_text_from_pdf(pdf2_path)
+
+# Compare texts
+differences = compare_texts(text1, text2)
+
+# Print results
+print("Differences between the two PDFs:")
+print(differences)
