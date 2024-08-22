@@ -1,41 +1,21 @@
-import torch
-from torch.utils.data import DataLoader
-from transformers import BertTokenizer, BertForSequenceClassification
+from sklearn.metrics import f1_score
 
-# Load your fine-tuned BERT model
-model = BertForSequenceClassification.from_pretrained('path_to_your_model')
-model.to('cuda')  # Ensure the model is on the GPU
+# Example true labels and predictions
+y_true = [0, 1, 2, 2, 1, 0]  # Replace with your true labels
+y_pred = [0, 2, 1, 2, 0, 0]  # Replace with your predicted labels
 
-# Prepare your tokenizer and dataset
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-test_dataset = ...  # Your test dataset
+# Calculate macro F1 score
+macro_f1 = f1_score(y_true, y_pred, average='macro')
+print(f'Macro F1 Score: {macro_f1}')
 
-# Create a DataLoader for batching
-batch_size = 32  # Adjust based on your GPU capacity
-test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+# Calculate micro F1 score
+micro_f1 = f1_score(y_true, y_pred, average='micro')
+print(f'Micro F1 Score: {micro_f1}')
 
-# Switch the model to evaluation mode
-model.eval()
+# Calculate macro F0.5 score
+macro_f05 = f1_score(y_true, y_pred, average='macro', beta=0.5)
+print(f'Macro F0.5 Score: {macro_f05}')
 
-all_predictions = []
-
-# Disable gradient calculation to reduce memory usage
-with torch.no_grad():
-    for batch in test_loader:
-        # Move input tensors to GPU
-        inputs = {key: value.to('cuda') for key, value in batch.items()}
-
-        # Forward pass to get predictions
-        outputs = model(**inputs)
-        logits = outputs.logits
-
-        # Convert logits to predicted class labels
-        predictions = torch.argmax(logits, dim=-1)
-
-        # Store predictions
-        all_predictions.extend(predictions.cpu().numpy())
-
-        # Clear memory
-        torch.cuda.empty_cache()
-
-# All predictions are now stored in all_predictions
+# Calculate micro F0.5 score
+micro_f05 = f1_score(y_true, y_pred, average='micro', beta=0.5)
+print(f'Micro F0.5 Score: {micro_f05}')
