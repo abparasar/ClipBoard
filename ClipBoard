@@ -1,30 +1,9 @@
-To efficiently load a large `.sas7bdat` file in Python and utilize parallel processing, you can use the `dask` library, which is designed for parallel computing with large datasets. Here’s how you can do it:
+import torch
 
-1. **Install Dask and its dependencies**:
-   ```bash
-   pip install dask[complete] pandas
-   ```
+# List all tensors in the current environment
+for obj in gc.get_objects():
+    if isinstance(obj, torch.Tensor):
+        del obj
 
-2. **Load the `.sas7bdat` file using Dask**:
-
-   ```python
-   import dask.dataframe as dd
-
-   # Load the SAS file into a Dask DataFrame
-   df = dd.read_sas('your_file.sas7bdat')
-
-   # Compute the result into a Pandas DataFrame if needed
-   df_computed = df.compute()
-   ```
-
-   Replace `'your_file.sas7bdat'` with the path to your file.
-
-3. **Adjust parallelism**:
-
-   Dask will automatically use all available CPU cores, but you can adjust the number of partitions for finer control. For instance:
-
-   ```python
-   df = dd.read_sas('your_file.sas7bdat', npartitions=10)  # Adjust npartitions based on your needs
-   ```
-
-Using Dask, the file will be processed in parallel, leveraging multiple cores to speed up the loading process. Adjusting the number of partitions allows you to manage how the data is split across available CPU resources.
+# Clear GPU cache
+torch.cuda.empty_cache()
