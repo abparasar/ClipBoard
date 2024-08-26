@@ -1,21 +1,48 @@
-from sklearn.metrics import f1_score
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
 
-# Example true labels and predictions
-y_true = [0, 1, 2, 2, 1, 0]  # Replace with your true labels
-y_pred = [0, 2, 1, 2, 0, 0]  # Replace with your predicted labels
+# Load the fine-tuned BERT model and tokenizer
+model_name = 'path_to_your_fine_tuned_model'
+model = BertForSequenceClassification.from_pretrained(model_name)
+tokenizer = BertTokenizer.from_pretrained(model_name)
 
-# Calculate macro F1 score
-macro_f1 = f1_score(y_true, y_pred, average='macro')
-print(f'Macro F1 Score: {macro_f1}')
+# Ensure the model is in evaluation mode
+model.eval()
 
-# Calculate micro F1 score
-micro_f1 = f1_score(y_true, y_pred, average='micro')
-print(f'Micro F1 Score: {micro_f1}')
+# Example utterances to classify
+utterances = ["Example utterance 1", "Another example", "More text to classify"]
 
-# Calculate macro F0.5 score
-macro_f05 = f1_score(y_true, y_pred, average='macro', beta=0.5)
-print(f'Macro F0.5 Score: {macro_f05}')
+# Tokenize the utterances
+inputs = tokenizer(utterances, padding=True, truncation=True, return_tensors="pt")
 
-# Calculate micro F0.5 score
-micro_f05 = f1_score(y_true, y_pred, average='micro', beta=0.5)
-print(f'Micro F0.5 Score: {micro_f05}')
+# Move the model and inputs to the GPU if available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+inputs = {key: value.to(device) for key, value in inputs.items()}
+
+# Perform inference to get logits
+with torch.no_grad():
+    outputs = model(**inputs)
+    logits = outputs.logits
+
+# Apply softmax to get probabilities
+probs = torch.softmax(logits, dim=-1)
+
+# Set the threshold
+threshold = 0.98
+
+# Predict the class for each utterance if any probability exceeds the threshold
+predicted_classes = []
+for prob in probs:
+    max_prob, predicted_class = torch.max(prob, dim=-1)
+    if max_prob >= threshold:
+        predicted_classes.append(predicted_class.item())  # Append the class index
+    else:
+        predicted_classes.append(None)  # No class meets the threshold
+
+# Output results
+for i, utterance in enumerate(utterances):
+    if predicted_classes[i] is not None:
+        print(f"'{utterance}' => Predicted Class: {predicted_classes[i]}")
+    else:
+        print(f"'{utterance}' => No class meets the threshold.")
