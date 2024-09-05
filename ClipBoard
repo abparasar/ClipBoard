@@ -1,48 +1,41 @@
-import torch
-from transformers import BertTokenizer, BertForSequenceClassification
+To programmatically select a kernel in Jupyter Notebook using code, you can use the `jupyter_client` library, which provides access to the Jupyter kernel management interface. However, Jupyter itself does not have built-in functionality to change the kernel directly within a notebook's code. 
 
-# Load the fine-tuned BERT model and tokenizer
-model_name = 'path_to_your_fine_tuned_model'
-model = BertForSequenceClassification.from_pretrained(model_name)
-tokenizer = BertTokenizer.from_pretrained(model_name)
+Instead, you can follow these approaches to change or check the kernel:
 
-# Ensure the model is in evaluation mode
-model.eval()
+### 1. **Check the Current Kernel**
 
-# Example utterances to classify
-utterances = ["Example utterance 1", "Another example", "More text to classify"]
+You can check the current kernel information using `jupyter_client` within a notebook:
 
-# Tokenize the utterances
-inputs = tokenizer(utterances, padding=True, truncation=True, return_tensors="pt")
+```python
+from jupyter_client import KernelManager
 
-# Move the model and inputs to the GPU if available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-inputs = {key: value.to(device) for key, value in inputs.items()}
+km = KernelManager()
+kernel_info = km.kernel_info()
+print(kernel_info)
+```
 
-# Perform inference to get logits
-with torch.no_grad():
-    outputs = model(**inputs)
-    logits = outputs.logits
+### 2. **Change Kernel Programmatically (via API)**
 
-# Apply softmax to get probabilities
-probs = torch.softmax(logits, dim=-1)
+Changing the kernel programmatically isn't typically done within the notebook itself because Jupyter notebooks are designed to be interactive with kernels that are already started. Changing kernels usually happens from the Jupyter interface.
 
-# Set the threshold
-threshold = 0.98
+### 3. **Switching Kernels in JupyterLab**
 
-# Predict the class for each utterance if any probability exceeds the threshold
-predicted_classes = []
-for prob in probs:
-    max_prob, predicted_class = torch.max(prob, dim=-1)
-    if max_prob >= threshold:
-        predicted_classes.append(predicted_class.item())  # Append the class index
-    else:
-        predicted_classes.append(None)  # No class meets the threshold
+To change the kernel in JupyterLab manually:
 
-# Output results
-for i, utterance in enumerate(utterances):
-    if predicted_classes[i] is not None:
-        print(f"'{utterance}' => Predicted Class: {predicted_classes[i]}")
-    else:
-        print(f"'{utterance}' => No class meets the threshold.")
+1. **Open Your Notebook**: Go to your notebook in JupyterLab.
+2. **Select the Kernel**: Click on the kernel name in the top-right corner of the notebook interface.
+3. **Choose a Kernel**: Select the kernel you want to use from the dropdown list.
+
+### 4. **Using `nbconvert` to Run Notebooks with Different Kernels**
+
+If you need to run a notebook with a specific kernel from the command line, you can use `nbconvert`:
+
+```bash
+jupyter nbconvert --to notebook --ExecutePreprocessor.kernel_name=myenv --execute my_notebook.ipynb
+```
+
+Replace `myenv` with your kernel name and `my_notebook.ipynb` with the notebook file you want to run.
+
+### Summary
+
+Directly selecting a kernel programmatically from within a Jupyter notebook is not supported. Instead, use the JupyterLab interface or command-line tools to manage and run notebooks with different kernels.
