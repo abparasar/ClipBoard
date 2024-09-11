@@ -1,38 +1,52 @@
-import subprocess
-import time
+Yes, you can visualize BERT word embeddings in 3D by using a technique like t-SNE for dimensionality reduction and then plotting the results with a 3D plotting library. Here’s how you can do it:
 
-def run_powershell_command(command):
-    """Run a PowerShell command and return the output."""
-    result = subprocess.run(
-        ["powershell", "-Command", command],
-        capture_output=True,
-        text=True
-    )
-    return result.stdout
+1. **Extract Embeddings** (same as before):
+   ```python
+   from transformers import BertTokenizer, BertModel
+   import torch
 
-def get_chrome_pids():
-    """Get a list of all Chrome process IDs using PowerShell."""
-    command = 'Get-Process -Name chrome | Select-Object -ExpandProperty Id'
-    output = run_powershell_command(command)
-    # Split the output into a list of PIDs and filter out empty strings
-    pids = [int(pid) for pid in output.split() if pid.isdigit()]
-    return pids
+   tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+   model = BertModel.from_pretrained('bert-base-uncased')
 
-def close_chrome_pids(pids):
-    """Close all Chrome processes with the given PIDs using PowerShell."""
-    for pid in pids:
-        command = f'Stop-Process -Id {pid} -Force'
-        run_powershell_command(command)
-        print(f'Closed Chrome process with PID {pid}')
+   text = "your sentence here"
+   inputs = tokenizer(text, return_tensors='pt')
+   with torch.no_grad():
+       outputs = model(**inputs)
+   embeddings = outputs.last_hidden_state
+   ```
 
-# Open a new Chrome window (adjust path if necessary)
-subprocess.Popen(["C:/Program Files/Google/Chrome/Application/chrome.exe", "--new-window", "https://www.example.com"])
+2. **Reduce Dimensionality to 3D**:
+   ```python
+   from sklearn.manifold import TSNE
+   import numpy as np
 
-# Wait for a while to ensure the window is opened
-time.sleep(10)
+   # Assuming `embeddings` is a tensor of shape (1, sequence_length, 768)
+   embeddings_np = embeddings.squeeze().numpy()  # shape (sequence_length, 768)
 
-# Get all Chrome PIDs
-chrome_pids = get_chrome_pids()
+   tsne = TSNE(n_components=3, random_state=0)
+   reduced_embeddings = tsne.fit_transform(embeddings_np)
+   ```
 
-# Close the Chrome processes
-close_chrome_pids(chrome_pids)
+3. **Visualize in 3D**:
+   - Use `matplotlib`'s 3D plotting capabilities:
+     ```python
+     import matplotlib.pyplot as plt
+     from mpl_toolkits.mplot3d import Axes3D
+
+     fig = plt.figure(figsize=(10, 8))
+     ax = fig.add_subplot(111, projection='3d')
+
+     # Scatter plot
+     ax.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], reduced_embeddings[:, 2])
+
+     ax.set_title('BERT Word Embeddings in 3D')
+     ax.set_xlabel('Dimension 1')
+     ax.set_ylabel('Dimension 2')
+     ax.set_zlabel('Dimension 3')
+
+     plt.show()
+     ```
+
+   - If you want to label the points, you can modify the scatter plot to include text annotations for each word or token.
+
+This will give you a 3D visualization of the word embeddings, which can help in understanding their spatial relationships.
