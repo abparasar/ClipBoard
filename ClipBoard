@@ -1,22 +1,29 @@
 import subprocess
 import time
-import psutil
+
+def run_powershell_command(command):
+    """Run a PowerShell command and return the output."""
+    result = subprocess.run(
+        ["powershell", "-Command", command],
+        capture_output=True,
+        text=True
+    )
+    return result.stdout
 
 def get_chrome_pids():
-    """Get a list of all Chrome process IDs."""
-    pids = []
-    for proc in psutil.process_iter(['pid', 'name']):
-        if proc.info['name'] == 'chrome.exe':
-            pids.append(proc.info['pid'])
+    """Get a list of all Chrome process IDs using PowerShell."""
+    command = 'Get-Process -Name chrome | Select-Object -ExpandProperty Id'
+    output = run_powershell_command(command)
+    # Split the output into a list of PIDs and filter out empty strings
+    pids = [int(pid) for pid in output.split() if pid.isdigit()]
     return pids
 
-def close_specific_chrome_window(target_pid):
-    """Close a specific Chrome window by PID."""
-    try:
-        os.system(f'taskkill /PID {target_pid} /F')
-        print(f'Closed Chrome window with PID {target_pid}')
-    except Exception as e:
-        print(f'Error closing Chrome window: {e}')
+def close_chrome_pids(pids):
+    """Close all Chrome processes with the given PIDs using PowerShell."""
+    for pid in pids:
+        command = f'Stop-Process -Id {pid} -Force'
+        run_powershell_command(command)
+        print(f'Closed Chrome process with PID {pid}')
 
 # Open a new Chrome window (adjust path if necessary)
 subprocess.Popen(["C:/Program Files/Google/Chrome/Application/chrome.exe", "--new-window", "https://www.example.com"])
@@ -24,12 +31,8 @@ subprocess.Popen(["C:/Program Files/Google/Chrome/Application/chrome.exe", "--ne
 # Wait for a while to ensure the window is opened
 time.sleep(10)
 
-# Get a list of all Chrome PIDs
+# Get all Chrome PIDs
 chrome_pids = get_chrome_pids()
 
-# Example: Close the first Chrome window found (replace with your target PID)
-if chrome_pids:
-    target_pid = chrome_pids[0]  # Adjust this as needed
-    close_specific_chrome_window(target_pid)
-else:
-    print("No Chrome processes found.")
+# Close the Chrome processes
+close_chrome_pids(chrome_pids)
