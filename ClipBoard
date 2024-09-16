@@ -7,10 +7,10 @@ mapping_dict = {
 }
 
 # List of values
-values_list = [10, 30, 40]
+values_list = [10, 30, 50]  # 50 does not exist in the dictionary
 
-# Create a list of keys by mapping the values
-keys_list = [key for key, value in mapping_dict.items() if value in values_list]
+# Create a list of keys or keep the value if the value does not exist in the dictionary
+result_list = [key for value in values_list if (key := next((k for k, v in mapping_dict.items() if v == value), None)) is not None] + [value for value in values_list if value not in mapping_dict.values()]
 
 # Print the result
-print(keys_list)
+print(result_list)
