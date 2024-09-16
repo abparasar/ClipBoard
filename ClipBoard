@@ -1,87 +1,16 @@
-If you have tokenized numbers (which likely represent the indices of tokens in a vocabulary), and you want to retrieve the words that correspond to these token numbers, you'll need access to the vocabulary file. The vocabulary typically maps token indices (numbers) back to words.
-
-### High-Level Steps:
-
-1. **Load the vocabulary**: You'll need a mapping (usually a dictionary) where the keys are token numbers (indices) and the values are the corresponding words.
-2. **Look up the words**: Use the token numbers to look up their corresponding words from the vocabulary.
-3. **Reconstruct the sentence**: Once you have the words, you can concatenate them to form the original text.
-
-### Example Code:
-
-Let’s assume you have a `vocab.json` file that contains the mapping of token numbers to words.
-
-#### 1. Load the Vocabulary
-
-First, load the vocabulary from the file:
-
-```python
-import json
-
-# Load the vocabulary mapping from token numbers to words
-with open("vocab.json", "r") as f:
-    vocab = json.load(f)
-
-# Example: vocab = {0: "[PAD]", 1: "[UNK]", 2: "I", 3: "love", 4: "learning", ...}
-```
-
-#### 2. Decode the Tokenized Numbers
-
-Now, given a list of tokenized numbers, you can convert them back to words:
-
-```python
-# Example tokenized numbers
-tokenized_numbers = [2, 3, 4, 0, 5]
-
-# Decode function: convert token numbers to words
-def decode_tokens(tokenized_numbers, vocab):
-    return [vocab[token] for token in tokenized_numbers if token in vocab]
-
-# Convert tokenized numbers to words
-decoded_words = decode_tokens(tokenized_numbers, vocab)
-
-# Join the words into a sentence
-decoded_sentence = " ".join(decoded_words)
-print(decoded_sentence)
-```
-
-#### Example Output:
-
-Assuming the `vocab.json` file has the following entries:
-
-```json
-{
-    "0": "[PAD]",
-    "1": "[UNK]",
-    "2": "I",
-    "3": "love",
-    "4": "learning",
-    "5": "!",
-    "6": "natural",
-    "7": "language",
-    "8": "processing"
+# Example dictionary mapping keys to values
+mapping_dict = {
+    "a": 10,
+    "b": 20,
+    "c": 30,
+    "d": 40
 }
-```
 
-And your tokenized numbers are:
+# List of values
+values_list = [10, 30, 40]
 
-```python
-tokenized_numbers = [2, 3, 4, 0, 5]  # Corresponding to ["I", "love", "learning", "[PAD]", "!"]
-```
+# Create a list of keys by mapping the values
+keys_list = [key for key, value in mapping_dict.items() if value in values_list]
 
-The decoded output would be:
-
-```
-I love learning !
-```
-
-### 3. Explanation:
-
-- **Load the Vocabulary**: You load a dictionary mapping token indices to words.
-- **Decode the Tokenized Numbers**: For each tokenized number, look it up in the `vocab` dictionary to retrieve the corresponding word.
-- **Concatenate the Words**: You join the decoded words to form a sentence, ignoring padding or unknown tokens.
-
-### Key Considerations:
-- **Special Tokens**: You may have special tokens like `[PAD]`, `[UNK]`, or `[CLS]` in your vocabulary that you may want to handle separately.
-- **Unknown Tokens**: If a token number does not exist in your vocabulary, you might want to handle it (e.g., by using an unknown word placeholder).
-
-This approach should work well for decoding tokenized numbers into their original text form, provided you have the right vocabulary mapping.
+# Print the result
+print(keys_list)
