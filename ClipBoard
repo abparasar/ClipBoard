@@ -1,29 +1,14 @@
-# Example dictionary mapping keys to values
-mapping_dict = {
-    "a": 10,
-    "b": 20,
-    "c": 30,
-    "d": 40
-}
+import torch
 
-# List of values
-values_list = [10, 30, 50]  # 50 does not exist in the dictionary
+# Define dimensions for the 3D tensor
+depth = 3
+rows = 4
+columns = 5
 
-# Create an empty list to store results
-result_list = []
+# Create a 1D tensor with numbers in sequence
+sequence_tensor = torch.arange(depth * rows * columns)
 
-# Iterate over each value in the values_list
-for value in values_list:
-    # Check if the value exists in the dictionary
-    found = False
-    for key, dict_value in mapping_dict.items():
-        if value == dict_value:
-            result_list.append(key)
-            found = True
-            break
-    # If the value was not found, add the value itself to the result_list
-    if not found:
-        result_list.append(value)
+# Reshape the 1D tensor into a 3D tensor
+tensor_sequence = sequence_tensor.view(depth, rows, columns)
 
-# Print the result
-print(result_list)
+print(tensor_sequence)
