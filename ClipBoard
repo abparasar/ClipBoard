@@ -9,8 +9,21 @@ mapping_dict = {
 # List of values
 values_list = [10, 30, 50]  # 50 does not exist in the dictionary
 
-# Create a list of keys or keep the value if the value does not exist in the dictionary
-result_list = [key for value in values_list if (key := next((k for k, v in mapping_dict.items() if v == value), None)) is not None] + [value for value in values_list if value not in mapping_dict.values()]
+# Create an empty list to store results
+result_list = []
+
+# Iterate over each value in the values_list
+for value in values_list:
+    # Check if the value exists in the dictionary
+    found = False
+    for key, dict_value in mapping_dict.items():
+        if value == dict_value:
+            result_list.append(key)
+            found = True
+            break
+    # If the value was not found, add the value itself to the result_list
+    if not found:
+        result_list.append(value)
 
 # Print the result
 print(result_list)
