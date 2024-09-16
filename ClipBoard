@@ -1,52 +1,27 @@
-Yes, you can visualize BERT word embeddings in 3D by using a technique like t-SNE for dimensionality reduction and then plotting the results with a 3D plotting library. Here’s how you can do it:
+import torch
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 
-1. **Extract Embeddings** (same as before):
-   ```python
-   from transformers import BertTokenizer, BertModel
-   import torch
+# Example tensor with shape [10000, 24, 600]
+# For demonstration purposes, we'll create a random tensor
+tensor = torch.randn(10000, 24, 600)
 
-   tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-   model = BertModel.from_pretrained('bert-base-uncased')
+# Reshape tensor to 2D array [10000*24, 600] for dimensionality reduction
+tensor_reshaped = tensor.view(-1, 600).numpy()  # Shape: [240000, 600]
 
-   text = "your sentence here"
-   inputs = tokenizer(text, return_tensors='pt')
-   with torch.no_grad():
-       outputs = model(**inputs)
-   embeddings = outputs.last_hidden_state
-   ```
+# Dimensionality Reduction using PCA
+pca = PCA(n_components=50)
+pca_result = pca.fit_transform(tensor_reshaped)  # Shape: [240000, 50]
 
-2. **Reduce Dimensionality to 3D**:
-   ```python
-   from sklearn.manifold import TSNE
-   import numpy as np
+# Further reduce to 2D using t-SNE
+tsne = TSNE(n_components=2, random_state=0)
+tsne_result = tsne.fit_transform(pca_result)  # Shape: [240000, 2]
 
-   # Assuming `embeddings` is a tensor of shape (1, sequence_length, 768)
-   embeddings_np = embeddings.squeeze().numpy()  # shape (sequence_length, 768)
-
-   tsne = TSNE(n_components=3, random_state=0)
-   reduced_embeddings = tsne.fit_transform(embeddings_np)
-   ```
-
-3. **Visualize in 3D**:
-   - Use `matplotlib`'s 3D plotting capabilities:
-     ```python
-     import matplotlib.pyplot as plt
-     from mpl_toolkits.mplot3d import Axes3D
-
-     fig = plt.figure(figsize=(10, 8))
-     ax = fig.add_subplot(111, projection='3d')
-
-     # Scatter plot
-     ax.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], reduced_embeddings[:, 2])
-
-     ax.set_title('BERT Word Embeddings in 3D')
-     ax.set_xlabel('Dimension 1')
-     ax.set_ylabel('Dimension 2')
-     ax.set_zlabel('Dimension 3')
-
-     plt.show()
-     ```
-
-   - If you want to label the points, you can modify the scatter plot to include text annotations for each word or token.
-
-This will give you a 3D visualization of the word embeddings, which can help in understanding their spatial relationships.
+# Plotting the 2D result
+plt.figure(figsize=(10, 8))
+plt.scatter(tsne_result[:, 0], tsne_result[:, 1], s=1, alpha=0.5)
+plt.title('t-SNE visualization of Word Embeddings')
+plt.xlabel('Component 1')
+plt.ylabel('Component 2')
+plt.show()
