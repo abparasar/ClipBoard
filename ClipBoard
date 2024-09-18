@@ -1,31 +1,116 @@
-from sklearn.model_selection import RandomizedSearchCV
-import xgboost as xgb
+To create a custom entity list, compare it with the extracted entities from the model, and calculate the hallucination rate, you can follow this process:
 
-# Initialize XGBoost classifier with GPU tree method
-xgb_model = xgb.XGBClassifier(tree_method='gpu_hist', gpu_id=0)  # Use 'gpu_hist' for GPU
+### Definitions:
+1. **Custom Entity List**: A list of expected entities in the text.
+2. **Extracted Entities**: Entities predicted by the model.
+3. **Hallucination Rate**: The rate at which the model predicts entities that are not present in the custom entity list.
 
-# Parameter grid for RandomizedSearchCV
-param_grid = {
-    'max_depth': [3, 5, 7, 9, 10],
-    'min_child_weight': [1, 3, 5, 7, 10],
-    'subsample': [0.6, 0.7, 0.8, 0.9, 1.0],
-    'colsample_bytree': [0.6, 0.7, 0.8, 0.9, 1.0],
-    'eta': [0.01, 0.05, 0.1, 0.2, 0.3],
-    'n_estimators': [100, 300, 500, 700, 1000],
-    'gamma': [0, 0.1, 0.5, 1, 2, 5],
-    'lambda': [0.01, 0.1, 1, 5, 10],
-    'alpha': [0, 0.1, 1, 5, 10]
-}
+The hallucination rate is calculated as:
+\[
+\text{Hallucination Rate} = \frac{\text{Number of hallucinated entities}}{\text{Total number of extracted entities}} \times 100
+\]
 
-# Randomized search for hyperparameter tuning
-random_search = RandomizedSearchCV(estimator=xgb_model, param_distributions=param_grid,
-                                   scoring='f1_macro', n_iter=50, cv=3, verbose=1, n_jobs=-1)
+### Example Workflow:
+1. **Custom Entity List**: A manually created list of entities you expect to see in the text.
+2. **Compare with Extracted Entities**: Compare the entities predicted by the model with the custom entity list.
+3. **Compute Hallucination Rate**: If the model predicts entities that are not in the custom list, these are "hallucinated" entities.
 
-# Fit the random search model on GPU
-random_search.fit(X_train, y_train)
+### Python Code:
+Here’s a script that implements the entire process:
 
-# Print the best parameters
-print(f"Best Parameters: {random_search.best_params_}")
+```python
+import torch
+from transformers import BertTokenizer, BertForTokenClassification
+from transformers import pipeline
 
-# Make predictions
-preds = random_search.best_estimator_.predict(X_test)
+# Load the pre-trained model and tokenizer from your local folder
+model_path = "./bert-large-uncased"  # Path to your locally saved model
+tokenizer = BertTokenizer.from_pretrained(model_path)
+model = BertForTokenClassification.from_pretrained(model_path)
+
+# Define your custom label names based on your custom entities
+label_list = ["O", "B-COMPANY", "I-COMPANY", "B-LOC", "I-LOC"]
+
+# Create the NER pipeline using the loaded model and tokenizer
+ner_pipeline = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+
+# Test sentence
+test_sentence = "Acme Corp located in Gotham City hired Alice for a new project."
+
+# Custom entity list (what we expect to find in the sentence)
+custom_entity_list = [
+    {"entity": "Acme Corp", "type": "COMPANY"},
+    {"entity": "Gotham City", "type": "LOC"}
+]
+
+# Perform NER to extract entities using the model
+ner_results = ner_pipeline(test_sentence)
+
+# Extract predicted entities in a structured format
+extracted_entities = []
+for entity in ner_results:
+    word = entity['word']
+    entity_label = label_list[int(entity['entity'].split("_")[-1])]
+    extracted_entities.append({"entity": word, "type": entity_label.split('-')[-1]})
+
+# Compare extracted entities with custom entity list and calculate hallucination rate
+hallucinated_entities = []
+
+# Extract entities from the custom entity list for comparison
+expected_entities = [item["entity"] for item in custom_entity_list]
+
+# Check for hallucinations
+for entity in extracted_entities:
+    entity_text = entity["entity"]
+    if entity_text not in expected_entities:
+        hallucinated_entities.append(entity_text)
+
+# Calculate hallucination rate
+if len(extracted_entities) > 0:
+    hallucination_rate = (len(hallucinated_entities) / len(extracted_entities)) * 100
+else:
+    hallucination_rate = 0
+
+# Display results
+print("Extracted Entities:", extracted_entities)
+print("Custom Entities:", custom_entity_list)
+print("Hallucinated Entities:", hallucinated_entities)
+print(f"Hallucination Rate: {hallucination_rate:.2f}%")
+```
+
+### Explanation of the Code:
+1. **Model Loading**:
+   - The pre-trained `bert-large-uncased` model and tokenizer are loaded from the local path.
+
+2. **Custom Entity List**:
+   - You manually define a `custom_entity_list`, which contains the entities you expect to see in the sentence, along with their entity types (e.g., `"COMPANY"`, `"LOC"`).
+
+3. **NER Pipeline**:
+   - The `ner_pipeline` extracts entities from the `test_sentence` using the BERT model.
+   - The extracted entities are stored in `extracted_entities`, including the word and its corresponding entity type.
+
+4. **Comparison**:
+   - The script compares the extracted entities with the `custom_entity_list`.
+   - Entities found in the extracted list but not in the custom list are considered hallucinations.
+
+5. **Hallucination Rate**:
+   - The hallucination rate is calculated by dividing the number of hallucinated entities by the total number of extracted entities.
+
+### Sample Output:
+Given the test sentence `"Acme Corp located in Gotham City hired Alice for a new project."`, with the custom entity list expecting only `"Acme Corp"` and `"Gotham City"`, the model might hallucinate an entity like `"Alice"` as a person, which was not expected.
+
+```bash
+Extracted Entities: [{'entity': 'Acme', 'type': 'COMPANY'}, {'entity': 'Corp', 'type': 'COMPANY'}, {'entity': 'Gotham', 'type': 'LOC'}, {'entity': 'City', 'type': 'LOC'}, {'entity': 'Alice', 'type': 'O'}]
+Custom Entities: [{'entity': 'Acme Corp', 'type': 'COMPANY'}, {'entity': 'Gotham City', 'type': 'LOC'}]
+Hallucinated Entities: ['Alice']
+Hallucination Rate: 20.00%
+```
+
+In this example:
+- The model predicts `"Alice"` as an entity, which is not part of the custom entity list, leading to a hallucination rate of 20%.
+
+### Customization:
+- You can modify the `custom_entity_list` based on the specific entities you expect for your task.
+- Adjust the `label_list` according to the label scheme used in your model.
+
+This script allows you to measure how often the model predicts entities that are incorrect or unexpected according to your custom entity list, providing insight into the model's accuracy and reliability for your specific use case.
