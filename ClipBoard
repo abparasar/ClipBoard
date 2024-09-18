@@ -1,50 +1,39 @@
-To create a custom entity list, compare it with the extracted entities from the model, and calculate the hallucination rate, you can follow this process:
+To run the Named Entity Recognition (NER) pipeline on GPU using your `bert-large-uncased` model, we can leverage PyTorch's GPU acceleration features. If you have a GPU available, we can modify the script to move the model and inputs to the GPU (CUDA device). 
 
-### Definitions:
-1. **Custom Entity List**: A list of expected entities in the text.
-2. **Extracted Entities**: Entities predicted by the model.
-3. **Hallucination Rate**: The rate at which the model predicts entities that are not present in the custom entity list.
+Here’s the GPU-enabled version of the script:
 
-The hallucination rate is calculated as:
-\[
-\text{Hallucination Rate} = \frac{\text{Number of hallucinated entities}}{\text{Total number of extracted entities}} \times 100
-\]
-
-### Example Workflow:
-1. **Custom Entity List**: A manually created list of entities you expect to see in the text.
-2. **Compare with Extracted Entities**: Compare the entities predicted by the model with the custom entity list.
-3. **Compute Hallucination Rate**: If the model predicts entities that are not in the custom list, these are "hallucinated" entities.
-
-### Python Code:
-Here’s a script that implements the entire process:
-
+### Updated Python Script for NER on GPU:
 ```python
 import torch
 from transformers import BertTokenizer, BertForTokenClassification
 from transformers import pipeline
 
+# Check if GPU is available and set the device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
 # Load the pre-trained model and tokenizer from your local folder
 model_path = "./bert-large-uncased"  # Path to your locally saved model
 tokenizer = BertTokenizer.from_pretrained(model_path)
-model = BertForTokenClassification.from_pretrained(model_path)
+model = BertForTokenClassification.from_pretrained(model_path).to(device)  # Move model to GPU
 
 # Define your custom label names based on your custom entities
 label_list = ["O", "B-COMPANY", "I-COMPANY", "B-LOC", "I-LOC"]
 
 # Create the NER pipeline using the loaded model and tokenizer
-ner_pipeline = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple")
+ner_pipeline = pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple", device=0)
 
-# Test sentence
+# Test sentence containing your custom entities
 test_sentence = "Acme Corp located in Gotham City hired Alice for a new project."
+
+# Perform NER to extract entities using the model
+ner_results = ner_pipeline(test_sentence)
 
 # Custom entity list (what we expect to find in the sentence)
 custom_entity_list = [
     {"entity": "Acme Corp", "type": "COMPANY"},
     {"entity": "Gotham City", "type": "LOC"}
 ]
-
-# Perform NER to extract entities using the model
-ner_results = ner_pipeline(test_sentence)
 
 # Extract predicted entities in a structured format
 extracted_entities = []
@@ -78,39 +67,30 @@ print("Hallucinated Entities:", hallucinated_entities)
 print(f"Hallucination Rate: {hallucination_rate:.2f}%")
 ```
 
-### Explanation of the Code:
-1. **Model Loading**:
-   - The pre-trained `bert-large-uncased` model and tokenizer are loaded from the local path.
+### Key Updates:
+1. **Device Setting**:
+   - We check if a GPU (CUDA) is available using `torch.cuda.is_available()`. If available, the model and inputs will be moved to the GPU using `.to(device)`.
+   - If GPU is available, the model runs on `device='cuda'` (GPU). Otherwise, it falls back to the CPU.
 
-2. **Custom Entity List**:
-   - You manually define a `custom_entity_list`, which contains the entities you expect to see in the sentence, along with their entity types (e.g., `"COMPANY"`, `"LOC"`).
+2. **Pipeline GPU Usage**:
+   - The `pipeline` is set with the parameter `device=0` to run on the first GPU. If you have multiple GPUs, you can adjust the device number accordingly.
 
-3. **NER Pipeline**:
-   - The `ner_pipeline` extracts entities from the `test_sentence` using the BERT model.
-   - The extracted entities are stored in `extracted_entities`, including the word and its corresponding entity type.
+3. **Model on GPU**:
+   - The line `model = model.to(device)` ensures that the model is loaded onto the GPU. This accelerates inference.
 
-4. **Comparison**:
-   - The script compares the extracted entities with the `custom_entity_list`.
-   - Entities found in the extracted list but not in the custom list are considered hallucinations.
-
-5. **Hallucination Rate**:
-   - The hallucination rate is calculated by dividing the number of hallucinated entities by the total number of extracted entities.
-
-### Sample Output:
-Given the test sentence `"Acme Corp located in Gotham City hired Alice for a new project."`, with the custom entity list expecting only `"Acme Corp"` and `"Gotham City"`, the model might hallucinate an entity like `"Alice"` as a person, which was not expected.
+### Expected Output on GPU:
+With the GPU-enabled script, the results will be the same, but the inference should be faster if a GPU is available.
 
 ```bash
+Using device: cuda
 Extracted Entities: [{'entity': 'Acme', 'type': 'COMPANY'}, {'entity': 'Corp', 'type': 'COMPANY'}, {'entity': 'Gotham', 'type': 'LOC'}, {'entity': 'City', 'type': 'LOC'}, {'entity': 'Alice', 'type': 'O'}]
 Custom Entities: [{'entity': 'Acme Corp', 'type': 'COMPANY'}, {'entity': 'Gotham City', 'type': 'LOC'}]
 Hallucinated Entities: ['Alice']
 Hallucination Rate: 20.00%
 ```
 
-In this example:
-- The model predicts `"Alice"` as an entity, which is not part of the custom entity list, leading to a hallucination rate of 20%.
+### Notes:
+- Make sure you have a compatible GPU with the necessary drivers installed.
+- If your model file is large and your GPU doesn't have enough memory, you might need to batch the input or reduce the model size.
 
-### Customization:
-- You can modify the `custom_entity_list` based on the specific entities you expect for your task.
-- Adjust the `label_list` according to the label scheme used in your model.
-
-This script allows you to measure how often the model predicts entities that are incorrect or unexpected according to your custom entity list, providing insight into the model's accuracy and reliability for your specific use case.
+Let me know if you need further adjustments!
