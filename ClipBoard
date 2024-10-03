@@ -1,16 +1,29 @@
 import pandas as pd
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
-# Sample dataframe
-df = pd.DataFrame({'Text': ['This is a simple example sentence.', 
-                            'Another example with different stop words.']})
+# Sample dataframe with sentences
+df = pd.DataFrame({'Text': ['This is a simple example sentence.',
+                            'Another example with different words.',
+                            'This example is different from the others.']})
 
-# Function to remove stop words using scikit-learn's ENGLISH_STOP_WORDS
-def remove_stop_words(text):
-    words = text.split()  # Split the sentence into words
-    return ' '.join([word for word in words if word.lower() not in ENGLISH_STOP_WORDS])
+# Function to extract unique words from a dataframe column
+def get_unique_words(column):
+    # Create a set to hold unique words
+    unique_words = set()
+    
+    # Iterate through each sentence in the column
+    for sentence in column:
+        words = sentence.split()  # Split sentence into words
+        unique_words.update(words)  # Add words to the set
 
-# Apply function to remove stop words from the 'Text' column and create a new column 'Filtered_Text'
-df['Filtered_Text'] = df['Text'].apply(remove_stop_words)
+    return unique_words
 
-print(df)
+# Get unique words from the 'Text' column
+unique_words_set = get_unique_words(df['Text'])
+
+# Create a new dataframe from the unique words set
+unique_words_df = pd.DataFrame(unique_words_set, columns=['Unique_Words'])
+
+# Reset index for better readability (optional)
+unique_words_df.reset_index(drop=True, inplace=True)
+
+print(unique_words_df)
