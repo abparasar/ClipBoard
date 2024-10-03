@@ -1,29 +1,18 @@
-import pandas as pd
+import numpy as np
 
-# Sample dataframe with sentences
-df = pd.DataFrame({'Text': ['This is a simple example sentence.',
-                            'Another example with different words.',
-                            'This example is different from the others.']})
+# Sample list and tensor
+word_list = ["apple", "banana", "cherry", "date", "fig"]
+tensor = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]])
 
-# Function to extract unique words from a dataframe column
-def get_unique_words(column):
-    # Create a set to hold unique words
-    unique_words = set()
-    
-    # Iterate through each sentence in the column
-    for sentence in column:
-        words = sentence.split()  # Split sentence into words
-        unique_words.update(words)  # Add words to the set
+# Words to delete
+words_to_delete = ["banana", "cherry", "fig"]
 
-    return unique_words
+# Find the indices of the words to delete
+indices_to_delete = [i for i, word in enumerate(word_list) if word in words_to_delete]
 
-# Get unique words from the 'Text' column
-unique_words_set = get_unique_words(df['Text'])
+# Delete the words and the corresponding tensor rows
+filtered_word_list = [word for i, word in enumerate(word_list) if i not in indices_to_delete]
+filtered_tensor = np.delete(tensor, indices_to_delete, axis=0)
 
-# Create a new dataframe from the unique words set
-unique_words_df = pd.DataFrame(unique_words_set, columns=['Unique_Words'])
-
-# Reset index for better readability (optional)
-unique_words_df.reset_index(drop=True, inplace=True)
-
-print(unique_words_df)
+print("Filtered Words:", filtered_word_list)
+print("Filtered Tensor:\n", filtered_tensor)
