@@ -1,50 +1,9 @@
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
-def visualize_closest_words(words, flattened_embedding, key, closest_words):
-    # Reduce dimensions of the embeddings to 2D using t-SNE
-    embeddings_to_plot = []
-    labels = []
+# First reduce the dimensionality to, say, 50 using PCA
+pca = PCA(n_components=50)
+pca_embeddings = pca.fit_transform(embeddings_to_plot)
 
-    # Add the key words and their closest words to the list
-    for k in key:
-        embeddings_to_plot.append(flattened_embedding[words.index(k)].numpy())  # Key word embedding
-        labels.append(k)
-        
-        for closest_word in closest_words[k]:
-            embeddings_to_plot.append(flattened_embedding[words.index(closest_word)].numpy())  # Closest word embedding
-            labels.append(closest_word)
-    
-    embeddings_to_plot = np.array(embeddings_to_plot)
-
-    # Perform t-SNE to reduce the embedding dimensionality to 2D
-    tsne = TSNE(n_components=2, random_state=42)
-    reduced_embeddings = tsne.fit_transform(embeddings_to_plot)
-
-    # Plot the 2D projection
-    plt.figure(figsize=(10, 10))
-    plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], c='blue', marker='o')
-
-    # Highlight the key words
-    for i, label in enumerate(labels):
-        if label in key:
-            plt.scatter(reduced_embeddings[i, 0], reduced_embeddings[i, 1], c='red', marker='x', s=100)
-            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=12, color='red')
-        else:
-            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=9, color='blue')
-
-    plt.title("t-SNE Visualization of Closest Words")
-    plt.show()
-
-# Example usage
-words = [...]  # Your list of 5676 words
-flattened_embedding = torch.tensor([...])  # Your tensor of embeddings
-key = ['word1', 'word2', 'word3']  # Your list of 3 key words
-
-# closest_words is the result from the previous code (find_closest_words function)
-closest_words = {...}  # Dictionary of closest words for each key
-
-# Visualize the closest words
-visualize_closest_words(words, flattened_embedding, key, closest_words)
+# Then apply t-SNE to the PCA-reduced embeddings
+tsne = TSNE(n_components=2, perplexity=30, random_state=42)
+reduced_embeddings = tsne.fit_transform(pca_embeddings)
