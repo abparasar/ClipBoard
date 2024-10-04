@@ -1,53 +1,47 @@
-import torch
 import numpy as np
-import matplotlib.pyplot as plt
+import torch
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 
-def visualize_closest_words(words, flattened_embedding, key, closest_words):
-    # Reduce dimensions of the embeddings to 2D using t-SNE or PCA + t-SNE
+def visualize_with_cosine_similarity(words, flattened_embedding, key, closest_words):
+    # Create a list of embeddings to visualize (key words + their closest words)
     embeddings_to_plot = []
     labels = []
-    color_map = []
 
-    # Add the key words and their closest words to the list
-    for idx, k in enumerate(key):
-        # Generate a unique color for each key word
-        color = cm.rainbow(np.linspace(0, 1, len(key)))[idx]
-        
-        # Add the key word embedding
+    for k in key:
         embeddings_to_plot.append(flattened_embedding[words.index(k)].numpy())  # Key word embedding
         labels.append(k)
-        color_map.append(color)  # Same color for the key word
-
-        # Add the closest word embeddings for this key word
+        
         for closest_word in closest_words[k]:
             embeddings_to_plot.append(flattened_embedding[words.index(closest_word)].numpy())  # Closest word embedding
             labels.append(closest_word)
-            color_map.append(color)  # Same color for the closest words
-
+    
     embeddings_to_plot = np.array(embeddings_to_plot)
 
-    # Optional: PCA for initial dimensionality reduction
-    pca = PCA(n_components=50)
-    pca_embeddings = pca.fit_transform(embeddings_to_plot)
+    # Compute the cosine similarity matrix
+    cosine_sim_matrix = cosine_similarity(embeddings_to_plot)
 
-    # Perform t-SNE on PCA-reduced embeddings
-    tsne = TSNE(n_components=2, perplexity=30, random_state=42)
-    reduced_embeddings = tsne.fit_transform(pca_embeddings)
+    # Compute cosine distance (1 - similarity)
+    cosine_dist_matrix = 1 - cosine_sim_matrix
 
-    # Plot the 2D projection
+    # Use t-SNE with the precomputed distance matrix
+    tsne = TSNE(n_components=2, metric="precomputed", random_state=42)
+    reduced_embeddings = tsne.fit_transform(cosine_dist_matrix)
+
+    # Plot the result
     plt.figure(figsize=(10, 10))
-    
-    # Scatter plot where each group (key + closest) has the same color
+    plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], c='blue', marker='o')
+
+    # Highlight the key words in red
     for i, label in enumerate(labels):
-        plt.scatter(reduced_embeddings[i, 0], reduced_embeddings[i, 1], color=color_map[i], marker='o', s=100 if label in key else 50)
+        if label in key:
+            plt.scatter(reduced_embeddings[i, 0], reduced_embeddings[i, 1], c='red', marker='x', s=100)
+            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=12, color='red')
+        else:
+            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=9, color='blue')
 
-        # Label the points
-        plt.text(reduced_embeddings[i, 0] + 0.01, reduced_embeddings[i, 1] + 0.01, label, fontsize=9 if label not in key else 12, color=color_map[i])
-
-    plt.title("t-SNE Visualization of Closest Words with Unique Colors")
+    plt.title("t-SNE Visualization with Cosine Similarity")
     plt.show()
 
 # Example usage
@@ -58,5 +52,5 @@ key = ['word1', 'word2', 'word3']  # Your list of 3 key words
 # closest_words is the result from the previous code (find_closest_words function)
 closest_words = {...}  # Dictionary of closest words for each key
 
-# Visualize the closest words
-visualize_closest_words(words, flattened_embedding, key, closest_words)
+# Visualize the closest words using cosine similarity
+visualize_with_cosine_similarity(words, flattened_embedding, key, closest_words)
