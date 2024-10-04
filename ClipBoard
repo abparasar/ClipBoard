@@ -1,83 +1,16 @@
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
-# Function to calculate cosine similarity using torch.matmul
-def cosine_similarity_torch(embedding_matrix):
-    # Normalize the embedding matrix
-    norms = torch.norm(embedding_matrix, dim=1, keepdim=True)
-    normalized_embeddings = embedding_matrix / norms
+# Load your dataset
+df = pd.read_csv('your_dataset.csv')  # Replace with your dataset path
 
-    # Compute cosine similarity using torch.matmul
-    cosine_sim_matrix = torch.matmul(normalized_embeddings, normalized_embeddings.T)
-    return cosine_sim_matrix
+# Assuming 'features' contains your input data and 'target' is your label
+X = df.drop('target_column', axis=1)  # Replace 'target_column' with your actual target column name
+y = df['target_column']  # Replace with your actual target column name
 
-# Function to find closest words using cosine similarity
-def find_closest_words_torch(words, flattened_embedding, key, top_n=5):
-    closest_words = {}
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Compute cosine similarity matrix using torch.matmul
-    cosine_sim_matrix = cosine_similarity_torch(flattened_embedding)
-
-    for k in key:
-        key_idx = words.index(k)  # Get index of key word
-        similarities = cosine_sim_matrix[key_idx]  # Cosine similarities for the key word
-
-        # Get indices of top_n most similar words (excluding the key word itself)
-        _, closest_indices = torch.topk(similarities, top_n + 1)  # Get top_n + 1 to exclude itself
-
-        # Filter out the key word from the closest indices
-        closest_indices = closest_indices[closest_indices != key_idx][:top_n]  # Exclude the key word index
-
-        # Store the closest words in the dictionary
-        closest_words[k] = [words[i] for i in closest_indices]
-    
-    return closest_words
-
-# Function to visualize the closest words using cosine similarity and legends for key words
-def visualize_with_cosine_similarity_torch_legend(words, flattened_embedding, key, closest_words):
-    # Create a list of embeddings to visualize (key words + their closest words)
-    embeddings_to_plot = []
-    labels = []
-    colors = []
-    color_map = {'key1': 'red', 'key2': 'green', 'key3': 'blue'}
-    
-    # Assign each key a unique color
-    color_keys = {k: color for k, color in zip(key, ['red', 'green', 'blue'])}
-
-    for k in key:
-        embeddings_to_plot.append(flattened_embedding[words.index(k)].numpy())  # Key word embedding
-        labels.append(k)
-        colors.append(color_keys[k])
-        
-        for closest_word in closest_words[k]:
-            embeddings_to_plot.append(flattened_embedding[words.index(closest_word)].numpy())  # Closest word embedding
-            labels.append(closest_word)
-            colors.append(color_keys[k])  # Same color as key word
-    
-    embeddings_to_plot = np.array(embeddings_to_plot)
-
-    # Compute the cosine similarity matrix using torch.matmul
-    cosine_sim_matrix = cosine_similarity_torch(torch.tensor(embeddings_to_plot))
-
-    # Compute cosine distance (1 - similarity)
-    cosine_dist_matrix = 1 - cosine_sim_matrix.numpy()
-
-    # Use t-SNE with the precomputed distance matrix
-    tsne = TSNE(n_components=2, metric="precomputed", random_state=42)
-    reduced_embeddings = tsne.fit_transform(cosine_dist_matrix)
-
-    # Plot the result
-    plt.figure(figsize=(10, 10))
-
-    # Plot points with their assigned colors (key and its closest words)
-    for i, label in enumerate(labels):
-        plt.scatter(reduced_embeddings[i, 0], reduced_embeddings[i, 1], c=colors[i], marker='o')
-
-    # Add legend for the key words
-    for k in key:
-        plt.scatter([], [], c=color_keys[k], label=k, marker='o')  # Empty scatter for legend
-
-    plt.legend(title="Key Words")
-    plt.title("t
+# Display the shapes of the resulting datasets
+print("Training data shape:", X_train.shape)
+print("Testing data shape:", X_test.shape)
