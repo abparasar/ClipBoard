@@ -1,47 +1,50 @@
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
-def find_closest_words(words, flattened_embedding, key, top_n=5):
-    # Convert key list to its corresponding indices in words
-    key_indices = [words.index(k) for k in key]
+def visualize_closest_words(words, flattened_embedding, key, closest_words):
+    # Reduce dimensions of the embeddings to 2D using t-SNE
+    embeddings_to_plot = []
+    labels = []
+
+    # Add the key words and their closest words to the list
+    for k in key:
+        embeddings_to_plot.append(flattened_embedding[words.index(k)].numpy())  # Key word embedding
+        labels.append(k)
+        
+        for closest_word in closest_words[k]:
+            embeddings_to_plot.append(flattened_embedding[words.index(closest_word)].numpy())  # Closest word embedding
+            labels.append(closest_word)
     
-    # Normalize the embeddings to have unit length (important for cosine similarity)
-    flattened_embedding = torch.nn.functional.normalize(flattened_embedding, p=2, dim=1)
+    embeddings_to_plot = np.array(embeddings_to_plot)
 
-    closest_words = {}
-    found_words = set()  # To track words already included in the output
-    
-    # For each word in key, find the closest embeddings
-    for i, k_idx in enumerate(key_indices):
-        key_embedding = flattened_embedding[k_idx]  # Get the embedding of the key word
-        
-        # Calculate cosine similarities with all other embeddings
-        similarities = torch.matmul(flattened_embedding, key_embedding)
-        
-        # Get the top N closest words (excluding the key word itself)
-        _, top_indices = torch.topk(similarities, len(words))  # Get indices in descending similarity order
-        
-        closest_for_key = []
-        
-        for idx in top_indices:
-            if idx != k_idx and words[idx] not in found_words:
-                closest_for_key.append(words[idx])
-                found_words.add(words[idx])  # Mark the word as used
-            if len(closest_for_key) == top_n:  # Stop when we reach the desired number of words
-                break
+    # Perform t-SNE to reduce the embedding dimensionality to 2D
+    tsne = TSNE(n_components=2, random_state=42)
+    reduced_embeddings = tsne.fit_transform(embeddings_to_plot)
 
-        closest_words[words[k_idx]] = closest_for_key
+    # Plot the 2D projection
+    plt.figure(figsize=(10, 10))
+    plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], c='blue', marker='o')
 
-    return closest_words
+    # Highlight the key words
+    for i, label in enumerate(labels):
+        if label in key:
+            plt.scatter(reduced_embeddings[i, 0], reduced_embeddings[i, 1], c='red', marker='x', s=100)
+            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=12, color='red')
+        else:
+            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=9, color='blue')
+
+    plt.title("t-SNE Visualization of Closest Words")
+    plt.show()
 
 # Example usage
 words = [...]  # Your list of 5676 words
 flattened_embedding = torch.tensor([...])  # Your tensor of embeddings
 key = ['word1', 'word2', 'word3']  # Your list of 3 key words
 
-# Get the closest words to each word in the key list
-closest_words = find_closest_words(words, flattened_embedding, key)
+# closest_words is the result from the previous code (find_closest_words function)
+closest_words = {...}  # Dictionary of closest words for each key
 
-# Output the result
-for k, v in closest_words.items():
-    print(f"Closest words to '{k}': {v}")
+# Visualize the closest words
+visualize_closest_words(words, flattened_embedding, key, closest_words)
