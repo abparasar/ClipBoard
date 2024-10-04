@@ -1,10 +1,42 @@
-import numpy as np
 import torch
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.manifold import TSNE
+import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
-def visualize_with_cosine_similarity(words, flattened_embedding, key, closest_words):
+# Function to calculate cosine similarity using torch.matmul
+def cosine_similarity_torch(embedding_matrix):
+    # Normalize the embedding matrix
+    norms = torch.norm(embedding_matrix, dim=1, keepdim=True)
+    normalized_embeddings = embedding_matrix / norms
+
+    # Compute cosine similarity using torch.matmul
+    cosine_sim_matrix = torch.matmul(normalized_embeddings, normalized_embeddings.T)
+    return cosine_sim_matrix
+
+# Function to find closest words using cosine similarity
+def find_closest_words_torch(words, flattened_embedding, key, top_n=5):
+    closest_words = {}
+
+    # Compute cosine similarity matrix using torch.matmul
+    cosine_sim_matrix = cosine_similarity_torch(flattened_embedding)
+
+    for k in key:
+        key_idx = words.index(k)  # Get index of key word
+        similarities = cosine_sim_matrix[key_idx]  # Cosine similarities for the key word
+
+        # Get indices of top_n most similar words (excluding the key word itself)
+        _, closest_indices = torch.topk(similarities, top_n + 1)  # Get top_n + 1 to exclude itself
+
+        # Filter out the key word from the closest indices
+        closest_indices = closest_indices[closest_indices != key_idx][:top_n]  # Exclude the key word index
+
+        # Store the closest words in the dictionary
+        closest_words[k] = [words[i] for i in closest_indices]
+    
+    return closest_words
+
+# Function to visualize the closest words using cosine similarity
+def visualize_with_cosine_similarity_torch(words, flattened_embedding, key, closest_words):
     # Create a list of embeddings to visualize (key words + their closest words)
     embeddings_to_plot = []
     labels = []
@@ -19,11 +51,11 @@ def visualize_with_cosine_similarity(words, flattened_embedding, key, closest_wo
     
     embeddings_to_plot = np.array(embeddings_to_plot)
 
-    # Compute the cosine similarity matrix
-    cosine_sim_matrix = cosine_similarity(embeddings_to_plot)
+    # Compute the cosine similarity matrix using torch.matmul
+    cosine_sim_matrix = cosine_similarity_torch(torch.tensor(embeddings_to_plot))
 
     # Compute cosine distance (1 - similarity)
-    cosine_dist_matrix = 1 - cosine_sim_matrix
+    cosine_dist_matrix = 1 - cosine_sim_matrix.numpy()
 
     # Use t-SNE with the precomputed distance matrix
     tsne = TSNE(n_components=2, metric="precomputed", random_state=42)
@@ -41,16 +73,16 @@ def visualize_with_cosine_similarity(words, flattened_embedding, key, closest_wo
         else:
             plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=9, color='blue')
 
-    plt.title("t-SNE Visualization with Cosine Similarity")
+    plt.title("t-SNE Visualization with Cosine Similarity (Torch Matmul)")
     plt.show()
 
 # Example usage
-words = [...]  # Your list of 5676 words
-flattened_embedding = torch.tensor([...])  # Your tensor of embeddings
-key = ['word1', 'word2', 'word3']  # Your list of 3 key words
+words = ['finance', 'investment', 'bank', 'loan', 'money', 'economy', 'capital', 'market', 'debt', 'credit', 'growth']  # Your list of words
+flattened_embedding = torch.randn(len(words), 600)  # Random embeddings (replace with actual embeddings)
+key = ['finance', 'loan', 'market']  # Your list of 3 key words
 
-# closest_words is the result from the previous code (find_closest_words function)
-closest_words = {...}  # Dictionary of closest words for each key
+# Find the closest words for each key word
+closest_words = find_closest_words_torch(words, flattened_embedding, key, top_n=5)
 
 # Visualize the closest words using cosine similarity
-visualize_with_cosine_similarity(words, flattened_embedding, key, closest_words)
+visualize_with_cosine_similarity_torch(words, flattened_embedding, key, closest_words)
