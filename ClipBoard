@@ -1,9 +1,6 @@
 import torch
 import numpy as np
 
-# Assuming 'words' is your list of words and 'flattened_embedding' is a tensor of shape (5676, 600)
-# Assuming 'key' is your list of 3 different words
-
 def find_closest_words(words, flattened_embedding, key, top_n=5):
     # Convert key list to its corresponding indices in words
     key_indices = [words.index(k) for k in key]
@@ -12,6 +9,7 @@ def find_closest_words(words, flattened_embedding, key, top_n=5):
     flattened_embedding = torch.nn.functional.normalize(flattened_embedding, p=2, dim=1)
 
     closest_words = {}
+    found_words = set()  # To track words already included in the output
     
     # For each word in key, find the closest embeddings
     for i, k_idx in enumerate(key_indices):
@@ -21,13 +19,20 @@ def find_closest_words(words, flattened_embedding, key, top_n=5):
         similarities = torch.matmul(flattened_embedding, key_embedding)
         
         # Get the top N closest words (excluding the key word itself)
-        _, top_indices = torch.topk(similarities, top_n + 1)  # +1 because the key word itself will have the highest similarity
+        _, top_indices = torch.topk(similarities, len(words))  # Get indices in descending similarity order
         
-        # Convert the indices to words
-        closest_words[key[i]] = [words[idx] for idx in top_indices if idx != k_idx][:top_n]
+        closest_for_key = []
+        
+        for idx in top_indices:
+            if idx != k_idx and words[idx] not in found_words:
+                closest_for_key.append(words[idx])
+                found_words.add(words[idx])  # Mark the word as used
+            if len(closest_for_key) == top_n:  # Stop when we reach the desired number of words
+                break
+
+        closest_words[words[k_idx]] = closest_for_key
 
     return closest_words
-
 
 # Example usage
 words = [...]  # Your list of 5676 words
