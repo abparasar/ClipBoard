@@ -35,19 +35,26 @@ def find_closest_words_torch(words, flattened_embedding, key, top_n=5):
     
     return closest_words
 
-# Function to visualize the closest words using cosine similarity
-def visualize_with_cosine_similarity_torch(words, flattened_embedding, key, closest_words):
+# Function to visualize the closest words using cosine similarity and legends for key words
+def visualize_with_cosine_similarity_torch_legend(words, flattened_embedding, key, closest_words):
     # Create a list of embeddings to visualize (key words + their closest words)
     embeddings_to_plot = []
     labels = []
+    colors = []
+    color_map = {'key1': 'red', 'key2': 'green', 'key3': 'blue'}
+    
+    # Assign each key a unique color
+    color_keys = {k: color for k, color in zip(key, ['red', 'green', 'blue'])}
 
     for k in key:
         embeddings_to_plot.append(flattened_embedding[words.index(k)].numpy())  # Key word embedding
         labels.append(k)
+        colors.append(color_keys[k])
         
         for closest_word in closest_words[k]:
             embeddings_to_plot.append(flattened_embedding[words.index(closest_word)].numpy())  # Closest word embedding
             labels.append(closest_word)
+            colors.append(color_keys[k])  # Same color as key word
     
     embeddings_to_plot = np.array(embeddings_to_plot)
 
@@ -63,26 +70,14 @@ def visualize_with_cosine_similarity_torch(words, flattened_embedding, key, clos
 
     # Plot the result
     plt.figure(figsize=(10, 10))
-    plt.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1], c='blue', marker='o')
 
-    # Highlight the key words in red
+    # Plot points with their assigned colors (key and its closest words)
     for i, label in enumerate(labels):
-        if label in key:
-            plt.scatter(reduced_embeddings[i, 0], reduced_embeddings[i, 1], c='red', marker='x', s=100)
-            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=12, color='red')
-        else:
-            plt.text(reduced_embeddings[i, 0], reduced_embeddings[i, 1], label, fontsize=9, color='blue')
+        plt.scatter(reduced_embeddings[i, 0], reduced_embeddings[i, 1], c=colors[i], marker='o')
 
-    plt.title("t-SNE Visualization with Cosine Similarity (Torch Matmul)")
-    plt.show()
+    # Add legend for the key words
+    for k in key:
+        plt.scatter([], [], c=color_keys[k], label=k, marker='o')  # Empty scatter for legend
 
-# Example usage
-words = ['finance', 'investment', 'bank', 'loan', 'money', 'economy', 'capital', 'market', 'debt', 'credit', 'growth']  # Your list of words
-flattened_embedding = torch.randn(len(words), 600)  # Random embeddings (replace with actual embeddings)
-key = ['finance', 'loan', 'market']  # Your list of 3 key words
-
-# Find the closest words for each key word
-closest_words = find_closest_words_torch(words, flattened_embedding, key, top_n=5)
-
-# Visualize the closest words using cosine similarity
-visualize_with_cosine_similarity_torch(words, flattened_embedding, key, closest_words)
+    plt.legend(title="Key Words")
+    plt.title("t
