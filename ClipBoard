@@ -1,18 +1,42 @@
+import torch
 import numpy as np
 
-# Sample list and tensor
-word_list = ["apple", "banana", "cherry", "date", "fig"]
-tensor = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]])
+# Assuming 'words' is your list of words and 'flattened_embedding' is a tensor of shape (5676, 600)
+# Assuming 'key' is your list of 3 different words
 
-# Words to delete
-words_to_delete = ["banana", "cherry", "fig"]
+def find_closest_words(words, flattened_embedding, key, top_n=5):
+    # Convert key list to its corresponding indices in words
+    key_indices = [words.index(k) for k in key]
+    
+    # Normalize the embeddings to have unit length (important for cosine similarity)
+    flattened_embedding = torch.nn.functional.normalize(flattened_embedding, p=2, dim=1)
 
-# Find the indices of the words to delete
-indices_to_delete = [i for i, word in enumerate(word_list) if word in words_to_delete]
+    closest_words = {}
+    
+    # For each word in key, find the closest embeddings
+    for i, k_idx in enumerate(key_indices):
+        key_embedding = flattened_embedding[k_idx]  # Get the embedding of the key word
+        
+        # Calculate cosine similarities with all other embeddings
+        similarities = torch.matmul(flattened_embedding, key_embedding)
+        
+        # Get the top N closest words (excluding the key word itself)
+        _, top_indices = torch.topk(similarities, top_n + 1)  # +1 because the key word itself will have the highest similarity
+        
+        # Convert the indices to words
+        closest_words[key[i]] = [words[idx] for idx in top_indices if idx != k_idx][:top_n]
 
-# Delete the words and the corresponding tensor rows
-filtered_word_list = [word for i, word in enumerate(word_list) if i not in indices_to_delete]
-filtered_tensor = np.delete(tensor, indices_to_delete, axis=0)
+    return closest_words
 
-print("Filtered Words:", filtered_word_list)
-print("Filtered Tensor:\n", filtered_tensor)
+
+# Example usage
+words = [...]  # Your list of 5676 words
+flattened_embedding = torch.tensor([...])  # Your tensor of embeddings
+key = ['word1', 'word2', 'word3']  # Your list of 3 key words
+
+# Get the closest words to each word in the key list
+closest_words = find_closest_words(words, flattened_embedding, key)
+
+# Output the result
+for k, v in closest_words.items():
+    print(f"Closest words to '{k}': {v}")
