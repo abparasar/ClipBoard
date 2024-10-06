@@ -1,8 +1,23 @@
-my_list = [1, 2, 3, 4]
+import pandas as pd
 
-if all(isinstance(element, int) for element in my_list):
-    print("All elements are integers.")
-    print("Minimum value:", min(my_list))
-    print("Maximum value:", max(my_list))
-else:
-    print("Not all elements are integers.")
+# Load the Excel files
+df1 = pd.read_excel('file1.xlsx')
+df2 = pd.read_excel('file2.xlsx')
+
+# Extract unique values from the specific columns
+unique_col1_df1 = df1['column_name1'].unique()
+unique_col2_df2 = df2['column_name2'].unique()
+
+# Convert to sets for easy comparison
+set_df1 = set(unique_col1_df1)
+set_df2 = set(unique_col2_df2)
+
+# Find matches and differences
+matches = set_df1.intersection(set_df2)
+only_in_df1 = set_df1.difference(set_df2)
+only_in_df2 = set_df2.difference(set_df1)
+
+# Display the results
+print("Matches:", matches)
+print("Only in df1:", only_in_df1)
+print("Only in df2:", only_in_df2)
