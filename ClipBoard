@@ -1,23 +1,60 @@
-import pandas as pd
+from sklearn.model_selection import StratifiedKFold
+from transformers import BertForSequenceClassification, Trainer, TrainingArguments
+import torch
+import numpy as np
 
-# Load the Excel files
-df1 = pd.read_excel('file1.xlsx')
-df2 = pd.read_excel('file2.xlsx')
+# Assume the dataset and labels are in `train_dataset` and `train_labels` respectively
+# Example dataset preparation (adjust as per your actual dataset)
+X = df['utterance'].tolist()
+y = df['intent'].tolist()
 
-# Extract unique values from the specific columns
-unique_col1_df1 = df1['column_name1'].unique()
-unique_col2_df2 = df2['column_name2'].unique()
+# Define the number of splits for StratifiedKFold
+n_splits = 5
+skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
 
-# Convert to sets for easy comparison
-set_df1 = set(unique_col1_df1)
-set_df2 = set(unique_col2_df2)
+# Loop over each fold
+for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
+    print(f"Fold {fold + 1}/{n_splits}")
 
-# Find matches and differences
-matches = set_df1.intersection(set_df2)
-only_in_df1 = set_df1.difference(set_df2)
-only_in_df2 = set_df2.difference(set_df1)
+    # Convert to TensorDataset if not already
+    train_fold_dataset = torch.utils.data.TensorDataset(
+        torch.tensor(np.array(X)[train_idx]), 
+        torch.tensor(np.array(y)[train_idx])
+    )
+    
+    val_fold_dataset = torch.utils.data.TensorDataset(
+        torch.tensor(np.array(X)[val_idx]), 
+        torch.tensor(np.array(y)[val_idx])
+    )
 
-# Display the results
-print("Matches:", matches)
-print("Only in df1:", only_in_df1)
-print("Only in df2:", only_in_df2)
+    # Load pre-trained BERT model for sequence classification
+    model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(set(y)))
+
+    # Define training arguments
+    training_args = TrainingArguments(
+        output_dir=f'./results_fold_{fold}',          # output directory for checkpoints and results
+        num_train_epochs=3,                           # number of epochs
+        per_device_train_batch_size=8,                # batch size for training
+        per_device_eval_batch_size=16,                # batch size for evaluation
+        evaluation_strategy="epoch",                  # evaluate at the end of each epoch
+        save_strategy="epoch",                        # save model at end of each epoch
+        logging_dir='./logs',                         # directory for storing logs
+        logging_steps=10,                             # log every 10 steps
+        load_best_model_at_end=True,                  # load best model when finished training
+        metric_for_best_model="accuracy",             # use accuracy to select best model
+    )
+
+    # Initialize the Trainer
+    trainer = Trainer(
+        model=model,                                  # the instantiated 🤗 Transformers model to be trained
+        args=training_args,                           # training arguments, defined above
+        train_dataset=train_fold_dataset,             # the training dataset for this fold
+        eval_dataset=val_fold_dataset,                # the evaluation dataset for this fold
+        compute_metrics=compute_metrics               # function to compute evaluation metrics
+    )
+
+    # Train and evaluate for the current fold
+    trainer.train()
+
+    # Save the model for this fold
+    trainer.save_model(f'./model_fold_{fold}')
