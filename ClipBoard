@@ -1,28 +1,138 @@
+To determine the best probability threshold for your BERT intent multiclassification model, you can follow an end-to-end approach. This includes loading your model, making predictions, and evaluating various thresholds based on a performance metric (like F1 score).
+
+Below is a complete code example that demonstrates this process:
+
+End-to-End Code Example
+
+import torch
 import numpy as np
 import pandas as pd
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score
+from transformers import BertTokenizer, BertForSequenceClassification
+from torch.utils.data import DataLoader, Dataset
+from sklearn.model_selection import train_test_split
 
-# Example predicted probabilities (replace this with your model's output)
-# Assume `y_prob` is a 2D array of shape (n_samples, n_classes)
-# and `y_true` is a 1D array of true class labels.
-y_prob = np.array([[0.1, 0.6, 0.3], [0.8, 0.1, 0.1], [0.4, 0.5, 0.1]])
-y_true = np.array([1, 0, 1])  # Example true labels
+# Example dataset class
+class IntentDataset(Dataset):
+    def __init__(self, texts, labels, tokenizer, max_len):
+        self.texts = texts
+        self.labels = labels
+        self.tokenizer = tokenizer
+        self.max_len = max_len
 
-# Set the range of thresholds
-thresholds = np.arange(0, 1.01, 0.01)
-best_threshold = 0
-best_f1 = 0
+    def __len__(self):
+        return len(self.texts)
 
-for threshold in thresholds:
-    # Convert probabilities to binary predictions
-    y_pred = np.argmax(y_prob >= threshold, axis=1)  # Assuming multiclass with argmax
+    def __getitem__(self, idx):
+        text = self.texts[idx]
+        label = self.labels[idx]
+        encoding = self.tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
+            max_length=self.max_len,
+            return_token_type_ids=False,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt',
+        )
+        return {
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'label': torch.tensor(label, dtype=torch.long)
+        }
 
-    # Calculate metrics
-    f1 = f1_score(y_true, y_pred, average='weighted')
-    
-    # Check if this is the best F1 score
-    if f1 > best_f1:
-        best_f1 = f1
-        best_threshold = threshold
+# Load your model and tokenizer
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=100)  # Adjust num_labels to 100
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
+# Example dataset (replace with your actual data)
+texts = ["I want to book a flight", "Show me my balance", "How do I reset my password"]  # Replace with your utterances
+labels = [0, 1, 2]  # Replace with your corresponding labels (0-99)
+
+# Split the dataset into training and validation sets
+texts_train, texts_val, labels_train, labels_val = train_test_split(texts, labels, test_size=0.2, random_state=42)
+
+# Create DataLoaders
+train_dataset = IntentDataset(texts_train, labels_train, tokenizer, max_len=128)
+val_dataset = IntentDataset(texts_val, labels_val, tokenizer, max_len=128)
+
+train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=2)
+
+# Put the model in evaluation mode
+model.eval()
+
+# Store validation probabilities
+val_probabilities = []
+
+with torch.no_grad():
+    for batch in val_loader:
+        input_ids = batch['input_ids']
+        attention_mask = batch['attention_mask']
+
+        # Forward pass
+        outputs = model(input_ids, attention_mask=attention_mask)
+        logits = outputs.logits
+        
+        # Apply softmax to get probabilities
+        probs = torch.softmax(logits, dim=1)
+        
+        # Convert probabilities to numpy and append to list
+        val_probabilities.append(probs.numpy())
+
+# Concatenate all probabilities into a single array
+val_probabilities = np.concatenate(val_probabilities)
+
+# Define the true labels for validation set
+true_labels = np.array(labels_val)
+
+# Function to find the best threshold
+def find_best_threshold(probs, true_labels):
+    thresholds = np.arange(0, 1.01, 0.01)
+    best_threshold = 0
+    best_f1 = 0
+
+    for threshold in thresholds:
+        # Convert probabilities to predicted classes based on the threshold
+        predicted_classes = np.argmax(probs >= threshold, axis=1)
+        
+        # Calculate F1 score
+        f1 = f1_score(true_labels, predicted_classes, average='weighted')
+        
+        # Update best threshold if necessary
+        if f1 > best_f1:
+            best_f1 = f1
+            best_threshold = threshold
+
+    return best_threshold, best_f1
+
+# Get the best threshold and F1 score
+best_threshold, best_f1 = find_best_threshold(val_probabilities, true_labels)
 
 print(f'Best Threshold: {best_threshold}, Best F1 Score: {best_f1}')
+
+Explanation:
+
+	1.	Dataset Preparation:
+	•	The IntentDataset class prepares your data for input to the BERT model.
+	•	The dataset is split into training and validation sets using train_test_split.
+	2.	Model Loading:
+	•	Load the pre-trained BERT model and tokenizer, adjusting num_labels to match your 100 intents.
+	3.	DataLoader Creation:
+	•	Create DataLoader instances for both training and validation datasets.
+	4.	Model Evaluation:
+	•	The model is set to evaluation mode to predict probabilities for the validation dataset.
+	•	Softmax is applied to get class probabilities.
+	5.	Threshold Optimization:
+	•	The find_best_threshold function iterates over a range of thresholds, calculates the F1 score for each, and identifies the best threshold based on the highest F1 score.
+	6.	Output:
+	•	Finally, it prints the best probability threshold along with the corresponding F1 score.
+
+Adjustments
+
+	•	Replace the example texts and labels with your actual dataset.
+	•	Ensure that the input texts are relevant to your intent classification task.
+	•	Adjust the batch size and maximum sequence length as needed for your specific case.
+
+This code provides a complete end-to-end solution to evaluate and determine the optimal threshold for your BERT multiclassification model.
