@@ -1,29 +1,28 @@
-To calculate the F1 score in Excel from two columns (actual values and predicted values), you’ll need to first calculate Precision and Recall, then use these to compute the F1 score.
+import numpy as np
+import pandas as pd
+from sklearn.metrics import f1_score, precision_score, recall_score
 
-Assume:
+# Example predicted probabilities (replace this with your model's output)
+# Assume `y_prob` is a 2D array of shape (n_samples, n_classes)
+# and `y_true` is a 1D array of true class labels.
+y_prob = np.array([[0.1, 0.6, 0.3], [0.8, 0.1, 0.1], [0.4, 0.5, 0.1]])
+y_true = np.array([1, 0, 1])  # Example true labels
 
-	•	Column A contains the actual values.
-	•	Column B contains the predicted values.
-	•	The positive class is "Positive" (replace with your actual positive class label if different).
+# Set the range of thresholds
+thresholds = np.arange(0, 1.01, 0.01)
+best_threshold = 0
+best_f1 = 0
 
-1. Calculate Precision:
+for threshold in thresholds:
+    # Convert probabilities to binary predictions
+    y_pred = np.argmax(y_prob >= threshold, axis=1)  # Assuming multiclass with argmax
 
-Precision = True Positives / (True Positives + False Positives)
+    # Calculate metrics
+    f1 = f1_score(y_true, y_pred, average='weighted')
+    
+    # Check if this is the best F1 score
+    if f1 > best_f1:
+        best_f1 = f1
+        best_threshold = threshold
 
-=COUNTIFS(A2:A100, "Positive", B2:B100, "Positive") / COUNTIF(B2:B100, "Positive")
-
-2. Calculate Recall:
-
-Recall = True Positives / (True Positives + False Negatives)
-
-=COUNTIFS(A2:A100, "Positive", B2:B100, "Positive") / COUNTIF(A2:A100, "Positive")
-
-3. Calculate F1 Score:
-
-F1 = 2 * (Precision * Recall) / (Precision + Recall)
-
-If Precision is in cell C1 and Recall is in cell D1, the F1 score formula will be:
-
-=2 * (C1 * D1) / (C1 + D1)
-
-This will give you the F1 score based on the positive class in your data. Adjust the class name and ranges as needed for your specific case.
+print(f'Best Threshold: {best_threshold}, Best F1 Score: {best_f1}')
