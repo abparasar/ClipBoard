@@ -1,1 +1,29 @@
-=SUMPRODUCT(--(A2:A100 = B2:B100)) / COUNTA(A2:A100)
+To calculate the F1 score in Excel from two columns (actual values and predicted values), you’ll need to first calculate Precision and Recall, then use these to compute the F1 score.
+
+Assume:
+
+	•	Column A contains the actual values.
+	•	Column B contains the predicted values.
+	•	The positive class is "Positive" (replace with your actual positive class label if different).
+
+1. Calculate Precision:
+
+Precision = True Positives / (True Positives + False Positives)
+
+=COUNTIFS(A2:A100, "Positive", B2:B100, "Positive") / COUNTIF(B2:B100, "Positive")
+
+2. Calculate Recall:
+
+Recall = True Positives / (True Positives + False Negatives)
+
+=COUNTIFS(A2:A100, "Positive", B2:B100, "Positive") / COUNTIF(A2:A100, "Positive")
+
+3. Calculate F1 Score:
+
+F1 = 2 * (Precision * Recall) / (Precision + Recall)
+
+If Precision is in cell C1 and Recall is in cell D1, the F1 score formula will be:
+
+=2 * (C1 * D1) / (C1 + D1)
+
+This will give you the F1 score based on the positive class in your data. Adjust the class name and ranges as needed for your specific case.
