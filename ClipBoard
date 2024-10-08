@@ -1,21 +1,10 @@
-import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-# y_true and y_pred: Your actual and predicted labels (for all 711 classes)
-y_true = np.array([...])  # Fill with true labels
-y_pred = np.array([...])  # Fill with predicted labels
+# Compute confusion matrix
+cm = confusion_matrix(y_true, y_pred, labels=classes)
 
-# Get unique classes (assuming you have 711 classes)
-classes = np.unique(y_true)
-
-# Initialize TP and FN counters
-TP = 0
-FN = 0
-
-# Calculate TP and FN for each class
-for cls in classes:
-    TP += np.sum((y_true == cls) & (y_pred == cls))  # True Positives
-    FN += np.sum((y_true == cls) & (y_pred != cls))  # False Negatives
-
-# Calculate micro recall
-micro_recall = TP / (TP + FN) if (TP + FN) > 0 else 0
-print(f'Micro Recall: {micro_recall:.4f}')
+# Create a confusion matrix display
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
+disp.plot(cmap=plt.cm.Blues)
+plt.show()
