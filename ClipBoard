@@ -1,92 +1,67 @@
-import torch
-from transformers import BertTokenizer, BertForSequenceClassification
-from torch.nn.functional import softmax
-from torch.utils.data import DataLoader, Dataset
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.metrics import precision_score, recall_score, f1_score
 
-# Sample dataset class
-class IntentDataset(Dataset):
-    def __init__(self, texts, labels, tokenizer, max_length):
-        self.texts = texts
-        self.labels = labels
-        self.tokenizer = tokenizer
-        self.max_length = max_length
+# Assuming you have a DataFrame score_df with columns true_intents, predicted_intent, and prob
+# score_df = pd.DataFrame({'true_intents': [...], 'predicted_intent': [...], 'prob': [...]})
 
-    def __len__(self):
-        return len(self.texts)
+# Initialize lists to store metrics for different thresholds
+thresholds = np.linspace(0, 1, 100)  # Thresholds from 0 to 1
+macro_precision_list = []
+macro_recall_list = []
+macro_f1_list = []
+macro_f05_list = []
+micro_precision_list = []
+micro_recall_list = []
+micro_f1_list = []
+micro_f05_list = []
 
-    def __getitem__(self, idx):
-        text = self.texts[idx]
-        label = self.labels[idx]
-        encoding = self.tokenizer.encode_plus(
-            text,
-            add_special_tokens=True,
-            max_length=self.max_length,
-            return_token_type_ids=False,
-            padding='max_length',
-            truncation=True,
-            return_attention_mask=True,
-            return_tensors='pt',
-        )
-        return {
-            'input_ids': encoding['input_ids'].flatten(),
-            'attention_mask': encoding['attention_mask'].flatten(),
-            'labels': torch.tensor(label, dtype=torch.long)
-        }
+# Iterate over different thresholds
+for threshold in thresholds:
+    # Classify as positive if the probability is greater than or equal to the threshold
+    predicted_at_threshold = np.where(score_df['prob'] >= threshold, score_df['predicted_intent'], 'negative_class')
 
-# Load the pre-trained BERT model and tokenizer
-model_name = 'bert-base-uncased'  # or 'distilbert-base-uncased'
-tokenizer = BertTokenizer.from_pretrained(model_name)
-model = BertForSequenceClassification.from_pretrained(model_name, num_labels=100)  # Replace 100 with the actual number of intents
+    # Calculate macro and micro precision, recall, F1, and F0.5
+    macro_precision = precision_score(score_df['true_intents'], predicted_at_threshold, average='macro', zero_division=0)
+    macro_recall = recall_score(score_df['true_intents'], predicted_at_threshold, average='macro', zero_division=0)
+    macro_f1 = f1_score(score_df['true_intents'], predicted_at_threshold, average='macro', zero_division=0)
+    macro_f05 = f1_score(score_df['true_intents'], predicted_at_threshold, average='macro', beta=0.5, zero_division=0)
 
-# Move the model to GPU if available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
+    micro_precision = precision_score(score_df['true_intents'], predicted_at_threshold, average='micro', zero_division=0)
+    micro_recall = recall_score(score_df['true_intents'], predicted_at_threshold, average='micro', zero_division=0)
+    micro_f1 = f1_score(score_df['true_intents'], predicted_at_threshold, average='micro', zero_division=0)
+    micro_f05 = f1_score(score_df['true_intents'], predicted_at_threshold, average='micro', beta=0.5, zero_division=0)
 
-# Sample input data
-texts = [
-    "What's the status of my account?",
-    "I'd like to open a new savings account.",
-    "How can I transfer funds?",
-    "What are the interest rates for loans?"
-]
-labels = [0, 1, 2, 3]  # Example labels corresponding to intents
+    # Store the results for each threshold
+    macro_precision_list.append(macro_precision)
+    macro_recall_list.append(macro_recall)
+    macro_f1_list.append(macro_f1)
+    macro_f05_list.append(macro_f05)
+    micro_precision_list.append(micro_precision)
+    micro_recall_list.append(micro_recall)
+    micro_f1_list.append(micro_f1)
+    micro_f05_list.append(micro_f05)
 
-# Create DataLoader
-max_length = 32  # Adjust based on your needs
-dataset = IntentDataset(texts, labels, tokenizer, max_length)
-dataloader = DataLoader(dataset, batch_size=2)  # Adjust batch size as needed
+# Plot the results
+plt.figure(figsize=(12, 8))
 
-# Set the model to evaluation mode
-model.eval()
+plt.plot(thresholds, macro_precision_list, label='Macro Precision')
+plt.plot(thresholds, macro_recall_list, label='Macro Recall')
+plt.plot(thresholds, macro_f1_list, label='Macro F1')
+plt.plot(thresholds, macro_f05_list, label='Macro F0.5')
 
-# Set the threshold for intent selection
-threshold = 0.98
+plt.plot(thresholds, micro_precision_list, label='Micro Precision', linestyle='--')
+plt.plot(thresholds, micro_recall_list, label='Micro Recall', linestyle='--')
+plt.plot(thresholds, micro_f1_list, label='Micro F1', linestyle='--')
+plt.plot(thresholds, micro_f05_list, label='Micro F0.5', linestyle='--')
 
-predicted_intents = []
+# Add labels and title
+plt.xlabel('Probability Threshold')
+plt.ylabel('Metrics')
+plt.title('Classification Metrics vs Probability Threshold')
+plt.legend(loc='best')
 
-with torch.no_grad():
-    for batch in dataloader:
-        input_ids = batch['input_ids'].to(device)
-        attention_mask = batch['attention_mask'].to(device)
-
-        # Get model predictions
-        outputs = model(input_ids, attention_mask=attention_mask)
-        logits = outputs.logits
-
-        # Apply softmax to get probabilities
-        probabilities = softmax(logits, dim=1)
-
-        # Get the predicted intent and its probability
-        for i in range(probabilities.shape[0]):
-            max_prob, max_idx = torch.max(probabilities[i], dim=0)
-            if max_prob >= threshold:
-                predicted_intents.append((max_idx.item(), max_prob.item()))
-            else:
-                predicted_intents.append((None, None))  # No intent if below threshold
-
-# Output the predicted intents
-for text, (intent, prob) in zip(texts, predicted_intents):
-    if intent is not None:
-        print(f"Text: '{text}' - Predicted Intent: {intent}, Probability: {prob:.2f}")
-    else:
-        print(f"Text: '{text}' - No intent predicted (probability below threshold)")
+# Show the plot
+plt.grid(True)
+plt.show()
