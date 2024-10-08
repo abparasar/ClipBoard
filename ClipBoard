@@ -1,37 +1,21 @@
-import pandas as pd
+import numpy as np
 
-# Data for the DataFrame
-data = {
-    'Abbreviation': [
-        'ATM', 'APY', 'APR', 'BIC', 'CD', 'CIP', 'FDIC', 'KYC', 'LLC', 'NDA', 
-        'NSF', 'ROI', 'SWIFT', 'TDA', 'W9', 'b4', 'b/c', 'btw', 'cuz', 'cya', 
-        'fyi', 'imo', 'idk', 'ill', 'lmk', 'omw', 'plz', 'thx', 'u', 'w/', 
-        'w/o', 'w8', 'gtg', 'gr8', '4u', '2moro', 'n/a', 'rsvp', 'tbd', 
-        'tba', 'eta', 'asap', 'vs', 're', 'p.s.', 'lol', 'omg', 'bff', 
-        'fomo', 'tmi', 'yolo', 'smh', 'idgaf'
-    ],
-    'Original Word': [
-        'Automated Teller Machine', 'Annual Percentage Yield', 'Annual Percentage Rate',
-        'Bank Identifier Code', 'Certificate of Deposit', 'Customer Identification Program',
-        'Federal Deposit Insurance Corporation', 'Know Your Customer', 
-        'Limited Liability Company', 'Non-Disclosure Agreement', 'Non-Sufficient Funds', 
-        'Return on Investment', 'Society for Worldwide Interbank Financial Telecommunication', 
-        'Time Deposit Account', 'Request for Taxpayer Identification Number and Certification',
-        'Before', 'Because', 'By the way', 'Because', 'See you', 
-        'For your information', 'In my opinion', "I don't know", 'I will', 
-        'Let me know', 'On my way', 'Please', 'Thanks', 'You', 
-        'With', 'Without', 'Wait', 'Got to go', 'Great', 'For you', 
-        'Tomorrow', 'Not applicable', "Répondez s'il vous plaît (Please respond)", 
-        'To be determined', 'To be announced', 'Estimated time of arrival', 
-        'As soon as possible', 'Versus', 'Regarding', 'Postscript', 
-        'Laughing out loud', 'Oh my God', 'Best friends forever', 
-        'Fear of missing out', 'Too much information', 'You only live once', 
-        'Shaking my head', "I don't give a (expletive)"
-    ]
-}
+# y_true and y_pred: Your actual and predicted labels (for all 711 classes)
+y_true = np.array([...])  # Fill with true labels
+y_pred = np.array([...])  # Fill with predicted labels
 
-# Create the DataFrame
-abbreviations_df = pd.DataFrame(data)
+# Get unique classes (assuming you have 711 classes)
+classes = np.unique(y_true)
 
-# Display the DataFrame
-print(abbreviations_df)
+# Initialize TP and FN counters
+TP = 0
+FN = 0
+
+# Calculate TP and FN for each class
+for cls in classes:
+    TP += np.sum((y_true == cls) & (y_pred == cls))  # True Positives
+    FN += np.sum((y_true == cls) & (y_pred != cls))  # False Negatives
+
+# Calculate micro recall
+micro_recall = TP / (TP + FN) if (TP + FN) > 0 else 0
+print(f'Micro Recall: {micro_recall:.4f}')
