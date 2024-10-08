@@ -1,10 +1,12 @@
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import precision_score, recall_score
 
-# Compute confusion matrix
-cm = confusion_matrix(y_true, y_pred, labels=classes)
+# Example true labels and predicted labels for a three-class classification problem
+y_true = ['A', 'B', 'C', 'A', 'B', 'C', 'A', 'C', 'A']
+y_pred = ['A', 'B', 'C', 'A', 'A', 'C', 'B', 'C', 'A']
 
-# Create a confusion matrix display
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
-disp.plot(cmap=plt.cm.Blues)
-plt.show()
+# Calculate micro precision and recall
+micro_precision = precision_score(y_true, y_pred, average='micro')
+micro_recall = recall_score(y_true, y_pred, average='micro')
+
+print(f'Micro Precision: {micro_precision:.2f}')
+print(f'Micro Recall: {micro_recall:.2f}')
