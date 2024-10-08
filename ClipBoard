@@ -1,67 +1,37 @@
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.metrics import precision_score, recall_score, f1_score
 
-# Assuming you have a DataFrame score_df with columns true_intents, predicted_intent, and prob
-# score_df = pd.DataFrame({'true_intents': [...], 'predicted_intent': [...], 'prob': [...]})
+# Data for the DataFrame
+data = {
+    'Abbreviation': [
+        'ATM', 'APY', 'APR', 'BIC', 'CD', 'CIP', 'FDIC', 'KYC', 'LLC', 'NDA', 
+        'NSF', 'ROI', 'SWIFT', 'TDA', 'W9', 'b4', 'b/c', 'btw', 'cuz', 'cya', 
+        'fyi', 'imo', 'idk', 'ill', 'lmk', 'omw', 'plz', 'thx', 'u', 'w/', 
+        'w/o', 'w8', 'gtg', 'gr8', '4u', '2moro', 'n/a', 'rsvp', 'tbd', 
+        'tba', 'eta', 'asap', 'vs', 're', 'p.s.', 'lol', 'omg', 'bff', 
+        'fomo', 'tmi', 'yolo', 'smh', 'idgaf'
+    ],
+    'Original Word': [
+        'Automated Teller Machine', 'Annual Percentage Yield', 'Annual Percentage Rate',
+        'Bank Identifier Code', 'Certificate of Deposit', 'Customer Identification Program',
+        'Federal Deposit Insurance Corporation', 'Know Your Customer', 
+        'Limited Liability Company', 'Non-Disclosure Agreement', 'Non-Sufficient Funds', 
+        'Return on Investment', 'Society for Worldwide Interbank Financial Telecommunication', 
+        'Time Deposit Account', 'Request for Taxpayer Identification Number and Certification',
+        'Before', 'Because', 'By the way', 'Because', 'See you', 
+        'For your information', 'In my opinion', "I don't know", 'I will', 
+        'Let me know', 'On my way', 'Please', 'Thanks', 'You', 
+        'With', 'Without', 'Wait', 'Got to go', 'Great', 'For you', 
+        'Tomorrow', 'Not applicable', "Répondez s'il vous plaît (Please respond)", 
+        'To be determined', 'To be announced', 'Estimated time of arrival', 
+        'As soon as possible', 'Versus', 'Regarding', 'Postscript', 
+        'Laughing out loud', 'Oh my God', 'Best friends forever', 
+        'Fear of missing out', 'Too much information', 'You only live once', 
+        'Shaking my head', "I don't give a (expletive)"
+    ]
+}
 
-# Initialize lists to store metrics for different thresholds
-thresholds = np.linspace(0, 1, 100)  # Thresholds from 0 to 1
-macro_precision_list = []
-macro_recall_list = []
-macro_f1_list = []
-macro_f05_list = []
-micro_precision_list = []
-micro_recall_list = []
-micro_f1_list = []
-micro_f05_list = []
+# Create the DataFrame
+abbreviations_df = pd.DataFrame(data)
 
-# Iterate over different thresholds
-for threshold in thresholds:
-    # Classify as positive if the probability is greater than or equal to the threshold
-    predicted_at_threshold = np.where(score_df['prob'] >= threshold, score_df['predicted_intent'], 'negative_class')
-
-    # Calculate macro and micro precision, recall, F1, and F0.5
-    macro_precision = precision_score(score_df['true_intents'], predicted_at_threshold, average='macro', zero_division=0)
-    macro_recall = recall_score(score_df['true_intents'], predicted_at_threshold, average='macro', zero_division=0)
-    macro_f1 = f1_score(score_df['true_intents'], predicted_at_threshold, average='macro', zero_division=0)
-    macro_f05 = f1_score(score_df['true_intents'], predicted_at_threshold, average='macro', beta=0.5, zero_division=0)
-
-    micro_precision = precision_score(score_df['true_intents'], predicted_at_threshold, average='micro', zero_division=0)
-    micro_recall = recall_score(score_df['true_intents'], predicted_at_threshold, average='micro', zero_division=0)
-    micro_f1 = f1_score(score_df['true_intents'], predicted_at_threshold, average='micro', zero_division=0)
-    micro_f05 = f1_score(score_df['true_intents'], predicted_at_threshold, average='micro', beta=0.5, zero_division=0)
-
-    # Store the results for each threshold
-    macro_precision_list.append(macro_precision)
-    macro_recall_list.append(macro_recall)
-    macro_f1_list.append(macro_f1)
-    macro_f05_list.append(macro_f05)
-    micro_precision_list.append(micro_precision)
-    micro_recall_list.append(micro_recall)
-    micro_f1_list.append(micro_f1)
-    micro_f05_list.append(micro_f05)
-
-# Plot the results
-plt.figure(figsize=(12, 8))
-
-plt.plot(thresholds, macro_precision_list, label='Macro Precision')
-plt.plot(thresholds, macro_recall_list, label='Macro Recall')
-plt.plot(thresholds, macro_f1_list, label='Macro F1')
-plt.plot(thresholds, macro_f05_list, label='Macro F0.5')
-
-plt.plot(thresholds, micro_precision_list, label='Micro Precision', linestyle='--')
-plt.plot(thresholds, micro_recall_list, label='Micro Recall', linestyle='--')
-plt.plot(thresholds, micro_f1_list, label='Micro F1', linestyle='--')
-plt.plot(thresholds, micro_f05_list, label='Micro F0.5', linestyle='--')
-
-# Add labels and title
-plt.xlabel('Probability Threshold')
-plt.ylabel('Metrics')
-plt.title('Classification Metrics vs Probability Threshold')
-plt.legend(loc='best')
-
-# Show the plot
-plt.grid(True)
-plt.show()
+# Display the DataFrame
+print(abbreviations_df)
