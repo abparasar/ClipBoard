@@ -1,22 +1,31 @@
 import torch
-from transformers import BertForSequenceClassification
+from transformers import BertForSequenceClassification, BertTokenizer
+from torchsummary import summary
 
 # Load your fine-tuned BERT model
 model_name = "path/to/your/fine-tuned-model"  # Update with your model path or name
-model = BertForSequenceClassification.from_pretrained(model_name, num_labels=711)  # Set num_labels according to your use case
+model = BertForSequenceClassification.from_pretrained(model_name, num_labels=711)  # Adjust num_labels as needed
 
 # Set the model to evaluation mode
 model.eval()
 
-# Use torchsummary to print the model summary
-from torchsummary import summary
+# Initialize the tokenizer
+tokenizer = BertTokenizer.from_pretrained(model_name)
 
-# Assuming you have a batch size of 1 and the input size of (sequence_length,)
-# Example: for BERT the sequence length is usually 512
-input_size = (1, 512)  # (batch size, sequence length)
+# Create a dummy input sentence
+dummy_sentence = "This is a test input for the BERT model."
 
-# Provide a dummy input tensor to get the summary
-dummy_input = torch.zeros(input_size, dtype=torch.long)  # Adjust the data type as needed
+# Tokenize the input
+inputs = tokenizer(dummy_sentence, return_tensors="pt", padding="max_length", truncation=True, max_length=512)
 
-# Print the summary
-summary(model, dummy_input.shape[1:])
+# Move the inputs to the GPU if available
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model.to(device)
+
+# Move input tensors to the same device as the model
+input_ids = inputs['input_ids'].to(device)
+attention_mask = inputs['attention_mask'].to(device)
+
+# Print the summary for the model
+# summary expects the input shape without the batch size, hence input_ids.shape[1:]
+summary(model, (512,), device=device)
