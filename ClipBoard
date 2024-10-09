@@ -1,12 +1,22 @@
-\begin{table}[ht]
-\centering
-\begin{tabular}{|c|c|c|}
-\hline
-Header 1 & Header 2 & Header 3 \\ \hline
-Row 1, Col 1 & Row 1, Col 2 & Row 1, Col 3 \\ \hline
-Row 2, Col 1 & Row 2, Col 2 & Row 2, Col 3 \\ \hline
-Row 3, Col 1 & Row 3, Col 2 & Row 3, Col 3 \\ \hline
-\end{tabular}
-\caption{Caption for the table}
-\label{tab:my_table}
-\end{table}
+import torch
+from transformers import BertForSequenceClassification
+
+# Load your fine-tuned BERT model
+model_name = "path/to/your/fine-tuned-model"  # Update with your model path or name
+model = BertForSequenceClassification.from_pretrained(model_name, num_labels=711)  # Set num_labels according to your use case
+
+# Set the model to evaluation mode
+model.eval()
+
+# Use torchsummary to print the model summary
+from torchsummary import summary
+
+# Assuming you have a batch size of 1 and the input size of (sequence_length,)
+# Example: for BERT the sequence length is usually 512
+input_size = (1, 512)  # (batch size, sequence length)
+
+# Provide a dummy input tensor to get the summary
+dummy_input = torch.zeros(input_size, dtype=torch.long)  # Adjust the data type as needed
+
+# Print the summary
+summary(model, dummy_input.shape[1:])
