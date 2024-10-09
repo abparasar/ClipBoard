@@ -1,12 +1,12 @@
-from sklearn.metrics import precision_score, recall_score
-
-# Example true labels and predicted labels for a three-class classification problem
-y_true = ['A', 'B', 'C', 'A', 'B', 'C', 'A', 'C', 'A']
-y_pred = ['A', 'B', 'C', 'A', 'A', 'C', 'B', 'C', 'A']
-
-# Calculate micro precision and recall
-micro_precision = precision_score(y_true, y_pred, average='micro')
-micro_recall = recall_score(y_true, y_pred, average='micro')
-
-print(f'Micro Precision: {micro_precision:.2f}')
-print(f'Micro Recall: {micro_recall:.2f}')
+\begin{table}[ht]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+Header 1 & Header 2 & Header 3 \\ \hline
+Row 1, Col 1 & Row 1, Col 2 & Row 1, Col 3 \\ \hline
+Row 2, Col 1 & Row 2, Col 2 & Row 2, Col 3 \\ \hline
+Row 3, Col 1 & Row 3, Col 2 & Row 3, Col 3 \\ \hline
+\end{tabular}
+\caption{Caption for the table}
+\label{tab:my_table}
+\end{table}
