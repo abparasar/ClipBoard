@@ -1,31 +1,27 @@
-import torch
-from transformers import BertForSequenceClassification, BertTokenizer
-from torchsummary import summary
+\documentclass{article}
+\usepackage{graphicx}
 
-# Load your fine-tuned BERT model
-model_name = "path/to/your/fine-tuned-model"  # Update with your model path or name
-model = BertForSequenceClassification.from_pretrained(model_name, num_labels=711)  # Adjust num_labels as needed
+\begin{document}
 
-# Set the model to evaluation mode
-model.eval()
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Feature}                  & \textbf{DistilBERT}                & \textbf{BERT}                        \\ \hline
+\textbf{Parameters}               & 66 million                         & 110 million                          \\ \hline
+\textbf{Layers}                   & 6 transformer layers               & 12 transformer layers                \\ \hline
+\textbf{Training Speed}           & Approximately 60\% faster than BERT & Slower due to more layers            \\ \hline
+\textbf{Output Hidden Size}       & 768                                & 768                                  \\ \hline
+\textbf{Maximum Sequence Length}  & 512 tokens                         & 512 tokens                           \\ \hline
+\textbf{Vocabulary Size}          & 30,000 words                       & 30,000 words                         \\ \hline
+\textbf{Pre-training Task}        & MLM                                & MLM + NSP                            \\ \hline
+\textbf{Fine-tuning Efficiency}   & Faster, requires less memory        & Slower, requires more memory         \\ \hline
+\textbf{Performance (Accuracy)}   & Slightly lower than BERT            & Higher due to larger architecture    \\ \hline
+\textbf{Use Cases}                & Lightweight, real-time processing   & High accuracy tasks, resource-heavy  \\ \hline
+\textbf{Number of Parameters}     & 66 million                         & 110 million                          \\ \hline
+\textbf{Pre-training Data Size}   & 16 GB (same as BERT)               & 16 GB (BookCorpus + Wikipedia)       \\ \hline
+\end{tabular}
+\caption{Feature Comparison between DistilBERT and BERT}
+\end{table}
 
-# Initialize the tokenizer
-tokenizer = BertTokenizer.from_pretrained(model_name)
-
-# Create a dummy input sentence
-dummy_sentence = "This is a test input for the BERT model."
-
-# Tokenize the input
-inputs = tokenizer(dummy_sentence, return_tensors="pt", padding="max_length", truncation=True, max_length=512)
-
-# Move the inputs to the GPU if available
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model.to(device)
-
-# Move input tensors to the same device as the model
-input_ids = inputs['input_ids'].to(device)
-attention_mask = inputs['attention_mask'].to(device)
-
-# Print the summary for the model
-# summary expects the input shape without the batch size, hence input_ids.shape[1:]
-summary(model, (512,), device=device)
+\end{document}
