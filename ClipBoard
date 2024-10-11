@@ -1,27 +1,9 @@
-\documentclass{article}
-\usepackage{graphicx}
+import pickle
 
-\begin{document}
+# Load the .pkl file
+with open('file_name.pkl', 'rb') as file:
+    data = pickle.load(file)
 
-\begin{table}[htbp]
-\centering
-\begin{tabular}{|l|l|l|}
-\hline
-\textbf{Feature}                  & \textbf{DistilBERT}                & \textbf{BERT}                        \\ \hline
-\textbf{Parameters}               & 66 million                         & 110 million                          \\ \hline
-\textbf{Layers}                   & 6 transformer layers               & 12 transformer layers                \\ \hline
-\textbf{Training Speed}           & Approximately 60\% faster than BERT & Slower due to more layers            \\ \hline
-\textbf{Output Hidden Size}       & 768                                & 768                                  \\ \hline
-\textbf{Maximum Sequence Length}  & 512 tokens                         & 512 tokens                           \\ \hline
-\textbf{Vocabulary Size}          & 30,000 words                       & 30,000 words                         \\ \hline
-\textbf{Pre-training Task}        & MLM                                & MLM + NSP                            \\ \hline
-\textbf{Fine-tuning Efficiency}   & Faster, requires less memory        & Slower, requires more memory         \\ \hline
-\textbf{Performance (Accuracy)}   & Slightly lower than BERT            & Higher due to larger architecture    \\ \hline
-\textbf{Use Cases}                & Lightweight, real-time processing   & High accuracy tasks, resource-heavy  \\ \hline
-\textbf{Number of Parameters}     & 66 million                         & 110 million                          \\ \hline
-\textbf{Pre-training Data Size}   & 16 GB (same as BERT)               & 16 GB (BookCorpus + Wikipedia)       \\ \hline
-\end{tabular}
-\caption{Feature Comparison between DistilBERT and BERT}
-\end{table}
-
-\end{document}
+# View the content
+print("Content of the .pkl file:")
+print(data)
