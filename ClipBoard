@@ -1,9 +1,11 @@
 import pickle
+import numpy as np
 
-# Load the .pkl file
-with open('file_name.pkl', 'rb') as file:
-    data = pickle.load(file)
+# Create a sample 2D array
+array_2d = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
 
-# View the content
-print("Content of the .pkl file:")
-print(data)
+# Save the 2D array to a .sav file
+with open('array_2d.sav', 'wb') as file:
+    pickle.dump(array_2d, file)
+
+print("2D array saved to 'array_2d.sav'")
