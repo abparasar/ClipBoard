@@ -1,31 +1,20 @@
-import pyautogui
-import time
-import webbrowser
-import os
-import shutil
+from bs4 import BeautifulSoup
 
-# Open the webpage using the default browser
-url = 'https://example.com'  # Replace with your URL
-webbrowser.open(url)
+# Read the HTML file
+html_file_path = 'path_to_your_file.html'  # Replace with your HTML file path
 
-# Wait for the page to load
-time.sleep(5)
+with open(html_file_path, 'r', encoding='utf-8') as file:
+    html_content = file.read()
 
-# Simulate pressing `Ctrl + S` to open the save dialog in most browsers
-pyautogui.hotkey('ctrl', 's')
+# Parse the HTML content using BeautifulSoup
+soup = BeautifulSoup(html_content, 'lxml')
 
-# Wait for the Save As dialog to open
-time.sleep(2)
+# Find the input field with id="x"
+input_field = soup.find('input', {'id': 'x'})
 
-# Type the filename with .html extension (the browser may default to .html)
-save_path = 'C:\\path\\to\\save\\file.html'  # Set a fixed path
-pyautogui.write(save_path)
-
-# Press Enter to save the file
-pyautogui.press('enter')
-
-# Wait for the file to save
-time.sleep(2)
-
-# If the file was saved as HTML, rename it to XML
-# Ensure the
+# Check if the input field is found and extract its value
+if input_field:
+    input_value = input_field.get('value')  # Extract the value attribute
+    print(f"Value of input field with id='x': {input_value}")
+else:
+    print("Input field with id='x' not found.")
