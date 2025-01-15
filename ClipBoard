@@ -1,24 +1,31 @@
-import requests
-from bs4 import BeautifulSoup
+import pyautogui
+import time
+import webbrowser
+import os
+import shutil
 
-# Replace this URL with the desired link
-url = 'https://example.com'
+# Open the webpage using the default browser
+url = 'https://example.com'  # Replace with your URL
+webbrowser.open(url)
 
-# Send a GET request to the URL
-response = requests.get(url)
+# Wait for the page to load
+time.sleep(5)
 
-# Check if the request was successful
-if response.status_code == 200:
-    # Parse the content using BeautifulSoup
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    # Print the raw HTML content
-    print(soup.prettify())
+# Simulate pressing `Ctrl + S` to open the save dialog in most browsers
+pyautogui.hotkey('ctrl', 's')
 
-    # If you want to extract specific data, you can use BeautifulSoup methods:
-    # For example, extract all paragraph tags:
-    paragraphs = soup.find_all('p')
-    for p in paragraphs:
-        print(p.get_text())
-else:
-    print(f"Failed to retrieve content. Status code: {response.status_code}")
+# Wait for the Save As dialog to open
+time.sleep(2)
+
+# Type the filename with .html extension (the browser may default to .html)
+save_path = 'C:\\path\\to\\save\\file.html'  # Set a fixed path
+pyautogui.write(save_path)
+
+# Press Enter to save the file
+pyautogui.press('enter')
+
+# Wait for the file to save
+time.sleep(2)
+
+# If the file was saved as HTML, rename it to XML
+# Ensure the
