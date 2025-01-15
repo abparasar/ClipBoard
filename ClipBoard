@@ -1,20 +1,13 @@
-from bs4 import BeautifulSoup
+import pandas as pd
 
-# Read the HTML fil
-html_file_path = 'path_to_your_file.html'  # Replace with your HTML file path
+# Define the path to your Excel file
+file_path = 'your_file.xlsx'  # Replace with your Excel file path
 
-with open(html_file_path, 'r', encoding='utf-8') as file:
-    html_content = file.read()
+# List of specific columns to read (either by name or column index)
+columns_to_read = ['Column1', 'Column3', 'Column5']  # Replace with the actual column names you need
 
-# Parse the HTML content using BeautifulSoup
-soup = BeautifulSoup(html_content, 'lxml')
+# Read the specific columns from the Excel file
+df = pd.read_excel(file_path, usecols=columns_to_read)
 
-# Find the input field with id="x"
-input_field = soup.find('input', {'id': 'x'})
-
-# Check if the input field is found and extract its value
-if input_field:
-    input_value = input_field.get('value')  # Extract the value attribute
-    print(f"Value of input field with id='x': {input_value}")
-else:
-    print("Input field with id='x' not found.")
+# Display the loaded DataFrame
+print(df)
