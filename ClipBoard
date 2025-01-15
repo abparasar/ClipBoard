@@ -1,1 +1,19 @@
-https://assets.ey.com/content/dam/ey-sites/ey-com/en_gl/topics/assurance/assurance-pdfs/ey-preventing-and-detecting-fraud.pdf
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+# Initialize the WebDriver (make sure the driver for your browser is installed)
+driver = webdriver.Edge()  # You can replace Edge with Chrome/Firefox, etc.
+
+# Open the URL
+url = "https://example.com"
+driver.get(url)
+
+# Example: Extract the title of the page
+title = driver.title
+print("Title of the page:", title)
+
+# If you need other content, you can use various Selenium commands, e.g., 
+# driver.find_element(By.XPATH, 'xpath').text to get specific content
+
+# Don't forget to close the driver when done
+driver.quit()
