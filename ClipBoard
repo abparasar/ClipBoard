@@ -1,19 +1,15 @@
 from selenium import webdriver
-from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
 
-# Initialize the WebDriver (make sure the driver for your browser is installed)
-driver = webdriver.Edge()  # You can replace Edge with Chrome/Firefox, etc.
+# Automatically download and use the correct version of ChromeDriver
+driver = webdriver.Chrome(ChromeDriverManager().install())
 
-# Open the URL
+# Open the webpage
 url = "https://example.com"
 driver.get(url)
 
-# Example: Extract the title of the page
-title = driver.title
-print("Title of the page:", title)
+# Example: Print the title of the page
+print(driver.title)
 
-# If you need other content, you can use various Selenium commands, e.g., 
-# driver.find_element(By.XPATH, 'xpath').text to get specific content
-
-# Don't forget to close the driver when done
+# Close the driver when done
 driver.quit()
