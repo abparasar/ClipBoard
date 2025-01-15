@@ -1,15 +1,15 @@
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-# Sample DataFrame
-data = {'Date': ['Jan 5, 2025', 'Feb 10, 2025', 'Mar 15, 2025']}
+# Sample DataFrame with some empty rows
+data = {'Date': ['Jan 5, 2025', ' ', 'Feb 10, 2025', '', 'Mar 15, 2025']}
 df = pd.DataFrame(data)
 
-# Convert the 'Date' column to datetime
-df['Date'] = pd.to_datetime(df['Date'], format='%b %d, %Y')
-
-# Add 30 calendar days to the 'Date' column
-df['New_Date'] = df['Date'] + timedelta(days=30)
+# Convert non-empty rows to datetime and add 30 days
+df['New_Date'] = df['Date'].apply(
+    lambda x: (pd.to_datetime(x, format='%b %d, %Y') + timedelta(days=30)) 
+    if x.strip() else ''  # Leave empty rows as ''
+)
 
 # Display the DataFrame
 print(df)
