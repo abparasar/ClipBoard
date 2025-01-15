@@ -1,49 +1,15 @@
-from bs4 import BeautifulSoup
 import pandas as pd
+from datetime import datetime, timedelta
 
-# HTML content (replace this with your actual HTML)
-html_content = """
-<div id="x">
-    <div class="header">
-        <div>Name</div>
-        <div>Age</div>
-        <div>City</div>
-    </div>
-    <div class="row">
-        <div>Alice</div>
-        <div>30</div>
-        <div>New York</div>
-    </div>
-    <div class="row">
-        <div>Bob</div>
-        <div>25</div>
-        <div>San Francisco</div>
-    </div>
-    <div class="row">
-        <div>Charlie</div>
-        <div>35</div>
-        <div>Los Angeles</div>
-    </div>
-</div>
-"""
+# Sample DataFrame
+data = {'Date': ['Jan 5, 2025', 'Feb 10, 2025', 'Mar 15, 2025']}
+df = pd.DataFrame(data)
 
-# Parse the HTML content
-soup = BeautifulSoup(html_content, 'html.parser')
+# Convert the 'Date' column to datetime
+df['Date'] = pd.to_datetime(df['Date'], format='%b %d, %Y')
 
-# Locate the table (div with id='x')
-table_div = soup.find('div', id='x')
-
-# Extract headers (from the div with class='header')
-headers = [div.text.strip() for div in table_div.find('div', class_='header').find_all('div')]
-
-# Extract rows (from all divs with class='row')
-rows = []
-for row_div in table_div.find_all('div', class_='row'):
-    row = [div.text.strip() for div in row_div.find_all('div')]
-    rows.append(row)
-
-# Create a DataFrame
-df = pd.DataFrame(rows, columns=headers)
+# Add 30 calendar days to the 'Date' column
+df['New_Date'] = df['Date'] + timedelta(days=30)
 
 # Display the DataFrame
 print(df)
