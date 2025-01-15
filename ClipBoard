@@ -1,57 +1,48 @@
 from bs4 import BeautifulSoup
 import pandas as pd
 
-# Sample HTML content
+# HTML content (replace this with your actual HTML)
 html_content = """
-<html>
-<head><title>Sample Table</title></head>
-<body>
-    <table id="x">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Age</th>
-                <th>City</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Alice</td>
-                <td>30</td>
-                <td>New York</td>
-            </tr>
-            <tr>
-                <td>Bob</td>
-                <td>25</td>
-                <td>San Francisco</td>
-            </tr>
-            <tr>
-                <td>Charlie</td>
-                <td>35</td>
-                <td>Los Angeles</td>
-            </tr>
-        </tbody>
-    </table>
-</body>
-</html>
+<div id="x">
+    <div class="header">
+        <div>Name</div>
+        <div>Age</div>
+        <div>City</div>
+    </div>
+    <div class="row">
+        <div>Alice</div>
+        <div>30</div>
+        <div>New York</div>
+    </div>
+    <div class="row">
+        <div>Bob</div>
+        <div>25</div>
+        <div>San Francisco</div>
+    </div>
+    <div class="row">
+        <div>Charlie</div>
+        <div>35</div>
+        <div>Los Angeles</div>
+    </div>
+</div>
 """
 
-# Parse the HTML content with BeautifulSoup
+# Parse the HTML content
 soup = BeautifulSoup(html_content, 'html.parser')
 
-# Find the table with id='x'
-table = soup.find('table', id='x')
+# Locate the table (div with id='x')
+table_div = soup.find('div', id='x')
 
-# Extract table headers
-headers = [th.text.strip() for th in table.find('thead').find_all('th')]
+# Extract headers (from the div with class='header')
+headers = [div.text.strip() for div in table_div.find('div', class_='header').find_all('div')]
 
-# Extract table rows
+# Extract rows (from all divs with class='row')
 rows = []
-for tr in table.find('tbody').find_all('tr'):
-    cells = [td.text.strip() for td in tr.find_all('td')]
-    rows.append(cells)
+for row_div in table_div.find_all('div', class_='row'):
+    row = [div.text.strip() for div in row_div.find_all('div')]
+    rows.append(row)
 
-# Load the data into a Pandas DataFrame
+# Create a DataFrame
 df = pd.DataFrame(rows, columns=headers)
 
 # Display the DataFrame
