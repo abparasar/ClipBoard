@@ -1,15 +1,24 @@
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
+import requests
+from bs4 import BeautifulSoup
 
-# Automatically download and use the correct version of ChromeDriver
-driver = webdriver.Chrome(ChromeDriverManager().install())
+# Replace this URL with the desired link
+url = 'https://example.com'
 
-# Open the webpage
-url = "https://example.com"
-driver.get(url)
+# Send a GET request to the URL
+response = requests.get(url)
 
-# Example: Print the title of the page
-print(driver.title)
+# Check if the request was successful
+if response.status_code == 200:
+    # Parse the content using BeautifulSoup
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # Print the raw HTML content
+    print(soup.prettify())
 
-# Close the driver when done
-driver.quit()
+    # If you want to extract specific data, you can use BeautifulSoup methods:
+    # For example, extract all paragraph tags:
+    paragraphs = soup.find_all('p')
+    for p in paragraphs:
+        print(p.get_text())
+else:
+    print(f"Failed to retrieve content. Status code: {response.status_code}")
