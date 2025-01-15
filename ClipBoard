@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-# Read the HTML file
+# Read the HTML fil
 html_file_path = 'path_to_your_file.html'  # Replace with your HTML file path
 
 with open(html_file_path, 'r', encoding='utf-8') as file:
