@@ -1,58 +1,18 @@
-from bs4 import BeautifulSoup
 import pandas as pd
+from datetime import datetime
 
-# Sample HTML content
-html_content = """
-<html>
-<head><title>Sample Table</title></head>
-<body>
-    <table id="x">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Age</th>
-                <th>City</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Alice</td>
-                <td>30</td>
-                <td>New York</td>
-            </tr>
-            <tr>
-                <td>Bob</td>
-                <td>25</td>
-                <td>San Francisco</td>
-            </tr>
-            <tr>
-                <td>Charlie</td>
-                <td>35</td>
-                <td>Los Angeles</td>
-            </tr>
-        </tbody>
-    </table>
-</body>
-</html>
-"""
+# Sample DataFrame
+data = {
+    'Due_Date': ['Jan 25, 2025', 'Jan 10, 2025', 'Feb 15, 2025', 'Jan 5, 2024']
+}
+df = pd.DataFrame(data)
 
-# Parse the HTML content with BeautifulSoup
-soup = BeautifulSoup(html_content, 'html.parser')
+# Convert 'Due_Date' column to datetime format
+df['Due_Date'] = pd.to_datetime(df['Due_Date'], format='%b %d, %Y')
 
-# Find the table with id='x'
-table = soup.find('table', id='x')
-
-# Extract table headers
-headers = [th.text.strip() for th in table.find('thead').find_all('th')]
-
-# Extract table rows
-rows = []
-for tr in table.find('tbody').find_all('tr'):
-    cells = [td.text.strip() for td in tr.find_all('td')]
-    rows.append(cells)
-
-# Load the data into a Pandas DataFrame
-df = pd.DataFrame(rows, columns=headers)
+# Calculate the number of days from today's date
+today = datetime.now()  # Get today's date
+df['Days_Due'] = (df['Due_Date'] - today).dt.days  # Subtract and get the number of days
 
 # Display the DataFrame
 print(df)
