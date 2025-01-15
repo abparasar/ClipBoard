@@ -1,27 +1,58 @@
-from email import policy
-from email.parser import BytesParser
+from bs4 import BeautifulSoup
+import pandas as pd
 
-# Path to your .mhtml file and the desired output HTML file
-mhtml_file = 'path/to/your/file.mhtml'
-html_file = 'output_file.html'
+# Sample HTML content
+html_content = """
+<html>
+<head><title>Sample Table</title></head>
+<body>
+    <table id="x">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Age</th>
+                <th>City</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Alice</td>
+                <td>30</td>
+                <td>New York</td>
+            </tr>
+            <tr>
+                <td>Bob</td>
+                <td>25</td>
+                <td>San Francisco</td>
+            </tr>
+            <tr>
+                <td>Charlie</td>
+                <td>35</td>
+                <td>Los Angeles</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
+"""
 
-# Step 1: Read and extract content from the .mhtml file
-with open(mhtml_file, 'rb') as f:
-    msg = BytesParser(policy=policy.default).parse(f)
+# Parse the HTML content with BeautifulSoup
+soup = BeautifulSoup(html_content, 'html.parser')
 
-# Step 2: Extract the HTML content
-html_content = None
+# Find the table with id='x'
+table = soup.find('table', id='x')
 
-# Iterate through the parts of the .mhtml file to find the HTML part
-for part in msg.iter_parts():
-    if part.get_content_type() == 'text/html':
-        html_content = part.get_payload(decode=True).decode(part.get_content_charset())
-        break
+# Extract table headers
+headers = [th.text.strip() for th in table.find('thead').find_all('th')]
 
-# Step 3: Save the extracted HTML content to a new HTML file
-if html_content:
-    with open(html_file, 'w', encoding='utf-8') as output_file:
-        output_file.write(html_content)
-    print(f"HTML content has been successfully saved to {html_file}")
-else:
-    print("No HTML content found in the .mhtml file.")
+# Extract table rows
+rows = []
+for tr in table.find('tbody').find_all('tr'):
+    cells = [td.text.strip() for td in tr.find_all('td')]
+    rows.append(cells)
+
+# Load the data into a Pandas DataFrame
+df = pd.DataFrame(rows, columns=headers)
+
+# Display the DataFrame
+print(df)
