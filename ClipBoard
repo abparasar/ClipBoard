@@ -1,24 +1,25 @@
-import requests
-from bs4 import BeautifulSoup
+def send_dataframe_in_email_body(to, subject, body, df):
+    # Convert the DataFrame to an HTML table
+    df_html = df.to_html(index=False)
 
-# URL of the website
-url = "https://example.com"
+    # Create an instance of the Outlook application
+    outlook = win32.Dispatch("Outlook.Application")
+    mail = outlook.CreateItem(0)  # 0 = MailItem
 
-# Send a GET request to fetch the webpage content
-response = requests.get(url)
+    # Set email details
+    mail.To = to
+    mail.Subject = subject
 
-# Check if the request was successful
-if response.status_code == 200:
-    # Parse the HTML content with BeautifulSoup
-    soup = BeautifulSoup(response.content, "html.parser")
-    
-    # Access specific content (e.g., the title of the page)
-    page_title = soup.title.string
-    print("Page Title:", page_title)
+    # Combine the plain body text with the DataFrame HTML
+    mail.HTMLBody = f"""
+    <p>{body}</p>
+    {df_html}
+    """
 
-    # Example: Extract all links from the page
-    links = soup.find_all("a")
-    for link in links:
-        print("Link:", link.get("href"))
-else:
-    print(f"Failed to fetch the webpage. Status code: {response.status_code}")
+    # Send the email
+    mail.Send()
+    print(f"Email sent to {to}")
+
+# Send the email with the DataFrame embedded in the body
+body_text = "Hello,\n\nHere is the DataFrame data:\n\nBest regards."
+send_dataframe_in_email_body(recipient, subject, body_text, df)
