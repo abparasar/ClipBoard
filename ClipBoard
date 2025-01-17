@@ -1,18 +1,24 @@
-import pandas as pd
-from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
 
-# Sample DataFrame
-data = {
-    'Due_Date': ['Jan 25, 2025', 'Jan 10, 2025', 'Feb 15, 2025', 'Jan 5, 2024']
-}
-df = pd.DataFrame(data)
+# URL of the website
+url = "https://example.com"
 
-# Convert 'Due_Date' column to datetime format
-df['Due_Date'] = pd.to_datetime(df['Due_Date'], format='%b %d, %Y')
+# Send a GET request to fetch the webpage content
+response = requests.get(url)
 
-# Calculate the number of days from today's date
-today = datetime.now()  # Get today's date
-df['Days_Due'] = (df['Due_Date'] - today).dt.days  # Subtract and get the number of days
+# Check if the request was successful
+if response.status_code == 200:
+    # Parse the HTML content with BeautifulSoup
+    soup = BeautifulSoup(response.content, "html.parser")
+    
+    # Access specific content (e.g., the title of the page)
+    page_title = soup.title.string
+    print("Page Title:", page_title)
 
-# Display the DataFrame
-print(df)
+    # Example: Extract all links from the page
+    links = soup.find_all("a")
+    for link in links:
+        print("Link:", link.get("href"))
+else:
+    print(f"Failed to fetch the webpage. Status code: {response.status_code}")
