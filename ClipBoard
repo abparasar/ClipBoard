@@ -1,25 +1,44 @@
-def send_dataframe_in_email_body(to, subject, body, df):
-    # Convert the DataFrame to an HTML table
-    df_html = df.to_html(index=False)
+Here are the important points from the “Master Directions on Fraud Risk Management for NBFCs (2024)”:
 
-    # Create an instance of the Outlook application
-    outlook = win32.Dispatch("Outlook.Application")
-    mail = outlook.CreateItem(0)  # 0 = MailItem
+1. Introduction
+	•	Issued under the powers of the RBI Act, 1934, and NHB Act, 1987.
+	•	Applicable to Non-Banking Financial Companies (NBFCs), including Housing Finance Companies (HFCs), with an asset size of ₹500 crore and above.
 
-    # Set email details
-    mail.To = to
-    mail.Subject = subject
+2. Governance Structure
+	•	Board-Approved Policy: Outlines roles, responsibilities, and fraud management measures.
+	•	Special Committee of the Board: Monitors fraud cases and suggests risk mitigation measures.
+	•	Whistle-Blower Mechanism: Transparent system for reporting suspicious activities.
 
-    # Combine the plain body text with the DataFrame HTML
-    mail.HTMLBody = f"""
-    <p>{body}</p>
-    {df_html}
-    """
+3. Early Warning Signals (EWS) Framework
+	•	Applicable to NBFCs in the Upper and Middle Layers.
+	•	EWS integrated with operational systems to detect fraudulent transactions.
+	•	Regular validation and updating of EWS for effectiveness.
 
-    # Send the email
-    mail.Send()
-    print(f"Email sent to {to}")
+4. Credit and Financial Transactions
+	•	External or internal audits for suspected frauds.
+	•	Fraud classification must adhere to principles of natural justice, including notice and opportunity for defense.
 
-# Send the email with the DataFrame embedded in the body
-body_text = "Hello,\n\nHere is the DataFrame data:\n\nBest regards."
-send_dataframe_in_email_body(recipient, subject, body_text, df)
+5. Reporting Requirements
+	•	Incidents of fraud must be reported:
+	•	To Law Enforcement Agencies (LEAs) immediately.
+	•	To RBI via Fraud Monitoring Returns (FMR) within 14 days of classification.
+	•	Separate reporting for group entities and overseas branches.
+
+6. Staff Accountability and Penal Measures
+	•	Examination of staff accountability in fraud cases.
+	•	Penalty for entities/persons involved in fraud:
+	•	Five-year debarment from raising funds post-settlement.
+	•	Cooling period before granting further credit.
+
+7. Audits and Legal Compliance
+	•	Regular legal audits for loans ₹1 crore and above.
+	•	Auditors required to report suspicious activities during their reviews.
+
+8. Special Reporting Requirements
+	•	Cases of theft, burglary, dacoity, and robbery must be reported to RBI within 7 days.
+	•	Quarterly returns on these incidents are mandatory.
+
+9. Repeal of Earlier Guidelines
+	•	Supersedes previous directions, including the 2016 guidelines on monitoring fraud in NBFCs.
+
+These directions aim to create a comprehensive framework for fraud prevention, detection, and timely reporting. Let me know if you’d like a detailed explanation of any section.
