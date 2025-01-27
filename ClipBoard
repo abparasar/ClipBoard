@@ -2,17 +2,15 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font
-from openpyxl.worksheet.hyperlink import Hyperlink
 
 # Create a sample DataFrame
 data = {"RAI ID": [101, 102, 103]}
 df = pd.DataFrame(data)
 
-# Add a new column with embedded links
+# Define the base URL
 base_url = "https://www.example.com/"
-df["Link"] = df["RAI ID"].apply(lambda x: f"{base_url}{x}")
 
-# Save the DataFrame to an Excel file with hyperlinks
+# Save the DataFrame to an Excel file with hyperlinks in the RAI ID column
 wb = Workbook()
 ws = wb.active
 ws.title = "RAI Data"
@@ -23,11 +21,12 @@ ws.append(df.columns.tolist())
 # Write rows with hyperlinks
 for _, row in df.iterrows():
     rai_id = row["RAI ID"]
-    url = row["Link"]
+    url = f"{base_url}{rai_id}"
     
-    ws.append([rai_id, url])  # Add values normally
-    ws.cell(row=ws.max_row, column=2).hyperlink = url  # Embed hyperlink
-    ws.cell(row=ws.max_row, column=2).font = Font(color="0000FF", underline="single")  # Style the link
+    # Write the RAI ID as a hyperlink
+    cell = ws.cell(row=ws.max_row + 1, column=1, value=rai_id)
+    cell.hyperlink = url
+    cell.font = Font(color="0000FF", underline="single")  # Style the hyperlink
 
 # Save the workbook
 wb.save("RAI_Data.xlsx")
