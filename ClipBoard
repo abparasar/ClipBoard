@@ -1,36 +1,14 @@
 import pandas as pd
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.styles import Font
 
-# Create a sample DataFrame
-data = {
-    "RAI ID": [101, 102, 103],
-    "Other Column": ["A", "B", "C"]  # Additional columns for testing
-}
+# Example DataFrame
+data = {'RAI Id': [123, 456, 789], 'Name': ['Alice', 'Bob', 'Charlie']}
 df = pd.DataFrame(data)
 
-# Define the base URL
-base_url = "https://www.example.com/"
+# Add link to 'RAI Id' column
+df['RAI Id'] = df['RAI Id'].apply(lambda x: f'<a href="https://www.example.com/{x}">{x}</a>')
 
-# Create an Excel workbook and sheet
-wb = Workbook()
-ws = wb.active
-ws.title = "RAI Data"
+# Convert to HTML
+html_table = df.to_html(escape=False, index=False)  # escape=False allows HTML tags to render
 
-# Write the header
-for col_idx, col_name in enumerate(df.columns, start=1):
-    ws.cell(row=1, column=col_idx, value=col_name)
-
-# Write rows while embedding hyperlinks in the "RAI ID" column
-for row_idx, row in enumerate(df.itertuples(index=False), start=2):
-    for col_idx, value in enumerate(row, start=1):
-        cell = ws.cell(row=row_idx, column=col_idx, value=value)
-        
-        # If the column is "RAI ID", add the hyperlink
-        if df.columns[col_idx - 1] == "RAI ID":
-            cell.hyperlink = f"{base_url}{value}"
-            cell.font = Font(color="0000FF", underline="single")  # Style the hyperlink
-
-# Save the workbook
-wb.save("RAI_Data.xlsx")
+# Output HTML
+print(html_table)
