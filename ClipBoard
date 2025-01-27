@@ -1,30 +1,33 @@
-import os
-import shutil
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Font
+from openpyxl.worksheet.hyperlink import Hyperlink
 
-def clear_folder(folder_path):
-    """
-    Deletes all the contents inside the specified folder.
+# Create a sample DataFrame
+data = {"RAI ID": [101, 102, 103]}
+df = pd.DataFrame(data)
 
-    Parameters:
-        folder_path (str): The path to the folder to clear.
+# Add a new column with embedded links
+base_url = "https://www.example.com/"
+df["Link"] = df["RAI ID"].apply(lambda x: f"{base_url}{x}")
 
-    Raises:
-        ValueError: If the specified path is not a folder.
-    """
-    if not os.path.isdir(folder_path):
-        raise ValueError(f"The path '{folder_path}' is not a valid folder.")
+# Save the DataFrame to an Excel file with hyperlinks
+wb = Workbook()
+ws = wb.active
+ws.title = "RAI Data"
 
-    for item in os.listdir(folder_path):
-        item_path = os.path.join(folder_path, item)
-        if os.path.isfile(item_path) or os.path.islink(item_path):
-            os.remove(item_path)  # Remove file or symbolic link
-        elif os.path.isdir(item_path):
-            shutil.rmtree(item_path)  # Remove directory
+# Write the header
+ws.append(df.columns.tolist())
 
-# Example usage
-folder_to_clear = "/path/to/your/folder"
-try:
-    clear_folder(folder_to_clear)
-    print(f"Contents of '{folder_to_clear}' have been cleared.")
-except Exception as e:
-    print(f"Error: {e}")
+# Write rows with hyperlinks
+for _, row in df.iterrows():
+    rai_id = row["RAI ID"]
+    url = row["Link"]
+    
+    ws.append([rai_id, url])  # Add values normally
+    ws.cell(row=ws.max_row, column=2).hyperlink = url  # Embed hyperlink
+    ws.cell(row=ws.max_row, column=2).font = Font(color="0000FF", underline="single")  # Style the link
+
+# Save the workbook
+wb.save("RAI_Data.xlsx")
