@@ -1,1 +1,30 @@
-https://wise.com/in/blog/bank-of-america-india?t&utm_source=perplexity
+import os
+import shutil
+
+def clear_folder(folder_path):
+    """
+    Deletes all the contents inside the specified folder.
+
+    Parameters:
+        folder_path (str): The path to the folder to clear.
+
+    Raises:
+        ValueError: If the specified path is not a folder.
+    """
+    if not os.path.isdir(folder_path):
+        raise ValueError(f"The path '{folder_path}' is not a valid folder.")
+
+    for item in os.listdir(folder_path):
+        item_path = os.path.join(folder_path, item)
+        if os.path.isfile(item_path) or os.path.islink(item_path):
+            os.remove(item_path)  # Remove file or symbolic link
+        elif os.path.isdir(item_path):
+            shutil.rmtree(item_path)  # Remove directory
+
+# Example usage
+folder_to_clear = "/path/to/your/folder"
+try:
+    clear_folder(folder_to_clear)
+    print(f"Contents of '{folder_to_clear}' have been cleared.")
+except Exception as e:
+    print(f"Error: {e}")
