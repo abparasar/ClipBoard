@@ -4,29 +4,33 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font
 
 # Create a sample DataFrame
-data = {"RAI ID": [101, 102, 103]}
+data = {
+    "RAI ID": [101, 102, 103],
+    "Other Column": ["A", "B", "C"]  # Additional columns for testing
+}
 df = pd.DataFrame(data)
 
 # Define the base URL
 base_url = "https://www.example.com/"
 
-# Save the DataFrame to an Excel file with hyperlinks in the RAI ID column
+# Create an Excel workbook and sheet
 wb = Workbook()
 ws = wb.active
 ws.title = "RAI Data"
 
 # Write the header
-ws.append(df.columns.tolist())
+for col_idx, col_name in enumerate(df.columns, start=1):
+    ws.cell(row=1, column=col_idx, value=col_name)
 
-# Write rows with hyperlinks
-for _, row in df.iterrows():
-    rai_id = row["RAI ID"]
-    url = f"{base_url}{rai_id}"
-    
-    # Write the RAI ID as a hyperlink
-    cell = ws.cell(row=ws.max_row + 1, column=1, value=rai_id)
-    cell.hyperlink = url
-    cell.font = Font(color="0000FF", underline="single")  # Style the hyperlink
+# Write rows while embedding hyperlinks in the "RAI ID" column
+for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+    for col_idx, value in enumerate(row, start=1):
+        cell = ws.cell(row=row_idx, column=col_idx, value=value)
+        
+        # If the column is "RAI ID", add the hyperlink
+        if df.columns[col_idx - 1] == "RAI ID":
+            cell.hyperlink = f"{base_url}{value}"
+            cell.font = Font(color="0000FF", underline="single")  # Style the hyperlink
 
 # Save the workbook
 wb.save("RAI_Data.xlsx")
