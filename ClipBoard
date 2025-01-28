@@ -1,14 +1,55 @@
-import pandas as pd
+Here are some hard Python interview questions designed to test your knowledge of advanced concepts, problem-solving skills, and the ability to write efficient and clean code:
 
-# Example DataFrame
-data = {'RAI Id': [123, 456, 789], 'Name': ['Alice', 'Bob', 'Charlie']}
-df = pd.DataFrame(data)
+Advanced Python Concepts
+	1.	Decorators
+	•	How do Python decorators work? Can you write a decorator to time the execution of a function?
+	•	Can decorators take arguments? Write an example.
+	2.	Metaclasses
+	•	What are metaclasses in Python, and how are they used? Provide an example.
+	3.	Generators and Iterators
+	•	What is the difference between a generator and an iterator?
+	•	How does the yield keyword work? Write a generator that generates the Fibonacci sequence.
+	4.	Context Managers
+	•	Explain the use of with statements in Python.
+	•	How can you create a custom context manager without using @contextlib.contextmanager?
+	5.	Global Interpreter Lock (GIL)
+	•	What is the GIL in Python? How does it affect multithreading?
+	•	How can you work around GIL-related performance issues?
+	6.	Data Classes
+	•	What are @dataclass decorators in Python? Explain with an example.
+	•	How can you customize equality or immutability in data classes?
 
-# Add link to 'RAI Id' column
-df['RAI Id'] = df['RAI Id'].apply(lambda x: f'<a href="https://www.example.com/{x}">{x}</a>')
+Algorithm Challenges
+	1.	Matrix Manipulation
+	•	Write a function to rotate an NxN matrix by 90 degrees clockwise.
+	•	How would you efficiently find the shortest path in a maze represented as a 2D grid?
+	2.	String Manipulation
+	•	Write a function to check if one string is a permutation of another.
+	•	How would you find the longest palindromic substring in a given string?
+	3.	Dynamic Programming
+	•	Implement a function to calculate the minimum number of coins needed to make a certain amount.
+	•	Solve the longest increasing subsequence problem.
+	4.	Concurrency
+	•	Write a producer-consumer problem using Python’s threading or multiprocessing module.
+	•	How can you use asyncio to handle multiple I/O-bound tasks simultaneously?
+	5.	Tree and Graph Problems
+	•	Write a function to find the lowest common ancestor of two nodes in a binary tree.
+	•	Implement Dijkstra’s algorithm in Python to find the shortest path in a graph.
 
-# Convert to HTML
-html_table = df.to_html(escape=False, index=False)  # escape=False allows HTML tags to render
+Performance and Optimization
+	1.	How would you profile a Python program to find bottlenecks?
+	2.	Compare and contrast the performance of lists and tuples. When should you use one over the other?
+	3.	How do you optimize a Python script for speed and memory usage?
+	4.	What are the implications of mutable default arguments in function definitions? How can you avoid common pitfalls?
 
-# Output HTML
-print(html_table)
+Libraries and Frameworks
+	1.	Explain how NumPy handles broadcasting and how it improves performance.
+	2.	What are the key differences between Python’s asyncio, threading, and multiprocessing modules?
+	3.	How would you use Python’s collections module to implement an LRU cache?
+
+Practical Code Challenges
+	1.	Write a function to merge overlapping intervals.
+	2.	Given a dictionary of words and a string s, write a function to determine if s can be segmented into space-separated dictionary words.
+	3.	Implement a rate limiter using Python to limit the number of API calls a user can make in a certain time frame.
+
+Would you like a deeper explanation or code examples for any of these?
