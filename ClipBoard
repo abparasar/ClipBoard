@@ -1,55 +1,163 @@
-Here are some hard Python interview questions designed to test your knowledge of advanced concepts, problem-solving skills, and the ability to write efficient and clean code:
+Here are answers to a selection of the hard Python interview questions:
 
-Advanced Python Concepts
-	1.	Decorators
-	•	How do Python decorators work? Can you write a decorator to time the execution of a function?
-	•	Can decorators take arguments? Write an example.
-	2.	Metaclasses
-	•	What are metaclasses in Python, and how are they used? Provide an example.
-	3.	Generators and Iterators
-	•	What is the difference between a generator and an iterator?
-	•	How does the yield keyword work? Write a generator that generates the Fibonacci sequence.
-	4.	Context Managers
-	•	Explain the use of with statements in Python.
-	•	How can you create a custom context manager without using @contextlib.contextmanager?
-	5.	Global Interpreter Lock (GIL)
-	•	What is the GIL in Python? How does it affect multithreading?
-	•	How can you work around GIL-related performance issues?
-	6.	Data Classes
-	•	What are @dataclass decorators in Python? Explain with an example.
-	•	How can you customize equality or immutability in data classes?
+1. Decorators
 
-Algorithm Challenges
-	1.	Matrix Manipulation
-	•	Write a function to rotate an NxN matrix by 90 degrees clockwise.
-	•	How would you efficiently find the shortest path in a maze represented as a 2D grid?
-	2.	String Manipulation
-	•	Write a function to check if one string is a permutation of another.
-	•	How would you find the longest palindromic substring in a given string?
-	3.	Dynamic Programming
-	•	Implement a function to calculate the minimum number of coins needed to make a certain amount.
-	•	Solve the longest increasing subsequence problem.
-	4.	Concurrency
-	•	Write a producer-consumer problem using Python’s threading or multiprocessing module.
-	•	How can you use asyncio to handle multiple I/O-bound tasks simultaneously?
-	5.	Tree and Graph Problems
-	•	Write a function to find the lowest common ancestor of two nodes in a binary tree.
-	•	Implement Dijkstra’s algorithm in Python to find the shortest path in a graph.
+Q: How do Python decorators work? Can you write a decorator to time the execution of a function?
+A: A decorator is a function that modifies the behavior of another function. It takes a function as input, adds some functionality, and returns it.
 
-Performance and Optimization
-	1.	How would you profile a Python program to find bottlenecks?
-	2.	Compare and contrast the performance of lists and tuples. When should you use one over the other?
-	3.	How do you optimize a Python script for speed and memory usage?
-	4.	What are the implications of mutable default arguments in function definitions? How can you avoid common pitfalls?
+import time
 
-Libraries and Frameworks
-	1.	Explain how NumPy handles broadcasting and how it improves performance.
-	2.	What are the key differences between Python’s asyncio, threading, and multiprocessing modules?
-	3.	How would you use Python’s collections module to implement an LRU cache?
+def time_it(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Execution time: {end_time - start_time} seconds")
+        return result
+    return wrapper
 
-Practical Code Challenges
-	1.	Write a function to merge overlapping intervals.
-	2.	Given a dictionary of words and a string s, write a function to determine if s can be segmented into space-separated dictionary words.
-	3.	Implement a rate limiter using Python to limit the number of API calls a user can make in a certain time frame.
+@time_it
+def slow_function():
+    time.sleep(2)
+    return "Done"
 
-Would you like a deeper explanation or code examples for any of these?
+print(slow_function())
+
+2. Generators and Iterators
+
+Q: How does the yield keyword work? Write a generator that generates the Fibonacci sequence.
+A: The yield keyword is used to create generators. It pauses the function’s execution, saves its state, and resumes from the same point when called again.
+
+def fibonacci(n):
+    a, b = 0, 1
+    for _ in range(n):
+        yield a
+        a, b = b, a + b
+
+for num in fibonacci(10):
+    print(num, end=" ")
+
+3. Global Interpreter Lock (GIL)
+
+Q: What is the GIL in Python, and how does it affect multithreading?
+A: The GIL is a mutex that allows only one thread to execute Python bytecode at a time. This simplifies memory management but can be a bottleneck in CPU-bound multithreaded programs. To overcome this, you can use multiprocessing or write performance-critical code in other languages like C.
+
+4. Context Managers
+
+Q: How can you create a custom context manager without using @contextlib.contextmanager?
+A: You can create a context manager by defining a class with __enter__ and __exit__ methods.
+
+class FileManager:
+    def __init__(self, filename, mode):
+        self.file = open(filename, mode)
+    
+    def __enter__(self):
+        return self.file
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file.close()
+
+with FileManager("example.txt", "w") as f:
+    f.write("Hello, world!")
+
+5. Rotate Matrix
+
+Q: Write a function to rotate an NxN matrix by 90 degrees clockwise.
+A: You can achieve this by transposing the matrix and then reversing each row.
+
+def rotate_matrix(matrix):
+    n = len(matrix)
+    # Transpose the matrix
+    for i in range(n):
+        for j in range(i, n):
+            matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
+    # Reverse each row
+    for row in matrix:
+        row.reverse()
+    return matrix
+
+matrix = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]
+print(rotate_matrix(matrix))
+
+6. Longest Palindromic Substring
+
+Q: How would you find the longest palindromic substring in a given string?
+A: Use a dynamic programming approach or expand around each possible center.
+
+def longest_palindrome(s):
+    def expand_around_center(left, right):
+        while left >= 0 and right < len(s) and s[left] == s[right]:
+            left -= 1
+            right += 1
+        return s[left+1:right]
+
+    result = ""
+    for i in range(len(s)):
+        # Odd-length palindrome
+        odd = expand_around_center(i, i)
+        # Even-length palindrome
+        even = expand_around_center(i, i+1)
+        result = max(result, odd, even, key=len)
+    return result
+
+print(longest_palindrome("babad"))
+
+7. Dijkstra’s Algorithm
+
+Q: Implement Dijkstra’s algorithm in Python to find the shortest path in a graph.
+A: Use a priority queue to explore nodes with the smallest known distance.
+
+import heapq
+
+def dijkstra(graph, start):
+    distances = {node: float('inf') for node in graph}
+    distances[start] = 0
+    priority_queue = [(0, start)]
+    
+    while priority_queue:
+        current_distance, current_node = heapq.heappop(priority_queue)
+        
+        if current_distance > distances[current_node]:
+            continue
+        
+        for neighbor, weight in graph[current_node].items():
+            distance = current_distance + weight
+            if distance < distances[neighbor]:
+                distances[neighbor] = distance
+                heapq.heappush(priority_queue, (distance, neighbor))
+    
+    return distances
+
+graph = {
+    'A': {'B': 1, 'C': 4},
+    'B': {'A': 1, 'C': 2, 'D': 5},
+    'C': {'A': 4, 'B': 2, 'D': 1},
+    'D': {'B': 5, 'C': 1}
+}
+print(dijkstra(graph, 'A'))
+
+8. Merge Overlapping Intervals
+
+Q: Write a function to merge overlapping intervals.
+A: Sort the intervals by start time and merge overlapping ones.
+
+def merge_intervals(intervals):
+    intervals.sort(key=lambda x: x[0])
+    merged = [intervals[0]]
+    
+    for current in intervals[1:]:
+        last = merged[-1]
+        if current[0] <= last[1]:  # Overlapping intervals
+            last[1] = max(last[1], current[1])
+        else:
+            merged.append(current)
+    return merged
+
+intervals = [[1, 3], [2, 6], [8, 10], [15, 18]]
+print(merge_intervals(intervals))
+
+Would you like more examples or deeper explanations on any specific question?
