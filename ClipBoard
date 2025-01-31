@@ -1,6 +1,0 @@
-This approach is effective in justifying the number of rank order breaks because it strikes a balance between being sensitive to changes in model performance and avoiding overreaction to minor fluctuations. By categorizing the breaks based on their frequency and impact, it provides a clear, data-driven framework that accounts for the dynamic nature of fraud patterns.
-	•	Green (≤ 2 breaks): This recognizes that minor shifts are common in dynamic environments, allowing the model to adapt without unnecessary alarm.
-	•	Yellow (3-4 breaks): This is a middle ground, indicating that more noticeable shifts should prompt investigation without prematurely concluding that there is a serious issue.
-	•	Red (≥ 5 breaks): This flags significant performance issues, where the model’s ability to accurately identify fraud may be compromised, ensuring that immediate action is taken.
-
-This approach ensures that you avoid flagging irrelevant shifts, focus on potential impactful changes, and direct attention to critical performance issues in a structured manner, which ultimately helps maintain model stability and fraud detection effectiveness.
