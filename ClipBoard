@@ -103,7 +103,7 @@ Explanation
 	•	The function retrieve_documents fetches the top-k relevant chunks based on a query. If a source_filter is passed, it limits the results to the specified document(s).
 	4.	Generating Responses:
 	•	The retrieved documents are fed into LLaMA 3.1 70B to generate a response, which includes citations indicating which document the information came from.
-	5.	Testing the System:
+	5.	Testing the System
 	•	The generate_response function is tested with a general query and one with a document filter (to retrieve information only from document1.pdf).
 
 Key Features
