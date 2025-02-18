@@ -1,0 +1,92 @@
+With two documents, the RAG pipeline remains similar, but we need to handle multiple document sources efficiently. Here’s how to modify the implementation:
+
+1. Load and Process Both PDFs
+
+Modify the function to handle multiple PDFs.
+
+def load_pdfs(file_paths):
+    from langchain.document_loaders import PyPDFLoader
+    
+    all_docs = []
+    doc_sources = []  # To track which document each text chunk comes from
+
+    for file_path in file_paths:
+        loader = PyPDFLoader(file_path)
+        docs = loader.load()
+        all_docs.extend([doc.page_content for doc in docs])
+        doc_sources.extend([file_path] * len(docs))  # Associate text with source
+    
+    return all_docs, doc_sources
+
+pdf_paths = ["document1.pdf", "document2.pdf"]
+documents, doc_sources = load_pdfs(pdf_paths)
+
+2. Create FAISS Vector Store with Source Tracking
+
+Now, we store embeddings while keeping track of the source of each chunk.
+
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+
+embedding_model = SentenceTransformer("intfloat/e5-mistral-7b-instruct")
+
+# Compute embeddings
+doc_embeddings = embedding_model.encode(documents, convert_to_numpy=True)
+
+# Create FAISS index
+dimension = doc_embeddings.shape[1]
+index = faiss.IndexFlatL2(dimension)
+index.add(doc_embeddings)
+
+# Store source mapping
+doc_index_map = {i: doc_sources[i] for i in range(len(documents))}
+
+3. Retrieve Relevant Passages from Both Documents
+
+Modify retrieval to return both text and source information.
+
+def retrieve_documents(query, top_k=3):
+    query_embedding = embedding_model.encode([query], convert_to_numpy=True)
+    distances, indices = index.search(query_embedding, top_k)
+
+    retrieved_docs = [(documents[i], doc_index_map[i]) for i in indices[0]]
+    return retrieved_docs
+
+4. Generate Response with Citations
+
+Modify response generation to include sources as citations.
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_name = "intfloat/e5-mistral-7b-instruct"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
+
+def generate_response(query):
+    retrieved_docs = retrieve_documents(query)
+    context = "\n".join([f"{text} [Source: {source}]" for text, source in retrieved_docs])
+
+    prompt = f"Context: {context}\n\nQuestion: {query}\n\nAnswer with inline citations in [Source: document_name]:"
+    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
+
+    output = model.generate(**inputs, max_new_tokens=200)
+    response = tokenizer.decode(output[0], skip_special_tokens=True)
+
+    return response, retrieved_docs
+
+5. Test the RAG System
+
+query = "What are the key insights from both documents?"
+response, sources = generate_response(query)
+
+print("Response:\n", response)
+print("\nSources:\n", sources)
+
+Key Improvements
+
+✅ Handles multiple documents seamlessly.
+✅ Tracks sources for proper citation.
+✅ Generates responses with inline citations.
+
+Would you like to extend this with metadata filtering (e.g., retrieve from a specific document only)?
