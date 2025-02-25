@@ -1,18 +1,26 @@
 import numpy as np
-from scipy.stats import chi2_contingency
+from scipy.stats import chisquare
 
-# Contingency table: rows = score bands, columns = months
-data = np.array([
-    [20, 18, 22, 19],   # Low score band
-    [35, 40, 38, 36],   # Medium score band
-    [50, 52, 55, 53]    # High score band
+# Example fraud counts (converted from rates)
+fraud_counts = np.array([
+    [20, 20, 22],   # Low
+    [35, 41, 38],   # Medium
+    [50, 51, 55]    # High
 ])
 
-# Perform the Chi-Square Test for Homogeneity
-chi2, p, dof, expected = chi2_contingency(data)
+# Total fraud cases per score band
+totals = fraud_counts.sum(axis=1)
 
-# Results
-print(f"Chi-Square Statistic: {chi2:.4f}")
-print(f"Degrees of Freedom: {dof}")
-print(f"P-Value: {p:.4f}")
-print("\nExpected Frequencies:\n", expected)
+# Expected distribution (if rates are constant, fraud evenly distributed across months)
+expected_ratios = fraud_counts.sum(axis=0) / fraud_counts.sum()  # overall monthly proportions
+expected_counts = np.array([totals[i] * expected_ratios for i in range(fraud_counts.shape[0])])
+
+# Row-wise Chi-Square Goodness-of-Fit Tests
+score_bands = ['Low', 'Medium', 'High']
+
+for i, band in enumerate(score_bands):
+    chi2, p = chisquare(f_obs=fraud_counts[i], f_exp=expected_counts[i])
+    print(f"Score Band: {band}")
+    print(f"  Chi-Square Statistic: {chi2:.4f}")
+    print(f"  P-Value: {p:.4f}")
+    print("  -->", "Significant difference" if p <= 0.05 else "No significant difference", "\n")
