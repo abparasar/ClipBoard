@@ -1,113 +1,18 @@
-Below is an implementation for a RAG system with two PDF documents and citations using LLaMA 3.1 70B for generation and e5-mistral-7b-instruct for retrieval.
-
-This implementation assumes you have both the PDF files and models available locally.
-
-1. Install Required Libraries
-
-pip install transformers sentence-transformers langchain pypdf faiss-cpu
-
-2. Full Python Code
-
-import faiss
 import numpy as np
-from langchain.document_loaders import PyPDFLoader
-from sentence_transformers import SentenceTransformer
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from scipy.stats import chi2_contingency
 
-# Load and process the PDFs
-def load_pdfs(file_paths):
-    all_docs = []
-    doc_sources = []  # Track which document each chunk is from
-    for file_path in file_paths:
-        loader = PyPDFLoader(file_path)
-        docs = loader.load()
-        all_docs.extend([doc.page_content for doc in docs])
-        doc_sources.extend([file_path] * len(docs))  # Track source document for each chunk
-    return all_docs, doc_sources
+# Contingency table: rows = score bands, columns = months
+data = np.array([
+    [20, 18, 22, 19],   # Low score band
+    [35, 40, 38, 36],   # Medium score band
+    [50, 52, 55, 53]    # High score band
+])
 
-# Load documents and their sources
-pdf_paths = ["document1.pdf", "document2.pdf"]
-documents, doc_sources = load_pdfs(pdf_paths)
+# Perform the Chi-Square Test for Homogeneity
+chi2, p, dof, expected = chi2_contingency(data)
 
-# Initialize embedding model for retrieval
-embedding_model = SentenceTransformer("intfloat/e5-mistral-7b-instruct")
-
-# Create embeddings for the documents
-doc_embeddings = embedding_model.encode(documents, convert_to_numpy=True)
-
-# Create FAISS index for fast retrieval
-dimension = doc_embeddings.shape[1]
-index = faiss.IndexFlatL2(dimension)
-index.add(doc_embeddings)
-
-# Store document source mapping (index -> source document)
-doc_index_map = {i: doc_sources[i] for i in range(len(documents))}
-
-# Retrieve relevant documents using FAISS
-def retrieve_documents(query, top_k=3, source_filter=None):
-    query_embedding = embedding_model.encode([query], convert_to_numpy=True)
-    distances, indices = index.search(query_embedding, top_k)
-
-    retrieved_docs = []
-    for i in indices[0]:
-        doc_text, doc_source = documents[i], doc_index_map[i]
-        
-        # Apply metadata filtering if source_filter is provided
-        if source_filter is None or source_filter in doc_source:
-            retrieved_docs.append((doc_text, doc_source))
-
-    return retrieved_docs[:top_k]  # Return top-k documents after filtering
-
-# Load the LLaMA model for generation
-model_name = "LLaMA-3.1-70B"  # Replace with your LLaMA model path or name
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
-
-# Generate response using LLaMA with retrieved context
-def generate_response(query, source_filter=None):
-    retrieved_docs = retrieve_documents(query, source_filter=source_filter)
-    
-    if not retrieved_docs:
-        return "No relevant information found in the specified document.", []
-
-    # Combine the retrieved documents into a single context for LLaMA
-    context = "\n".join([f"{text} [Source: {source}]" for text, source in retrieved_docs])
-
-    prompt = f"Context: {context}\n\nQuestion: {query}\n\nAnswer with inline citations in [Source: document_name]:"
-    inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
-
-    # Generate the response
-    output = model.generate(**inputs, max_new_tokens=200)
-    response = tokenizer.decode(output[0], skip_special_tokens=True)
-
-    return response, retrieved_docs
-
-# Test the RAG system with a query
-query = "What are the key findings in both documents?"
-response, sources = generate_response(query)
-
-print("Response:\n", response)
-print("\nSources:\n", sources)
-
-# Example with document filtering (only from 'document1.pdf')
-response_filtered, sources_filtered = generate_response(query, source_filter="document1.pdf")
-print("\nResponse (Filtered to 'document1.pdf'):\n", response_filtered)
-
-Explanation
-	1.	Loading PDFs:
-	•	The function load_pdfs reads the two PDF files and splits them into chunks of text.
-	•	The doc_sources list tracks which document each text chunk comes from.
-	2.	Creating Embeddings:
-	•	e5-mistral-7b-instruct is used to create dense embeddings for each document chunk, which are stored in a FAISS index for efficient retrieval.
-	3.	Retrieving Documents:
-	•	The function retrieve_documents fetches the top-k relevant chunks based on a query. If a source_filter is passed, it limits the results to the specified document(s).
-	4.	Generating Responses:
-	•	The retrieved documents are fed into LLaMA 3.1 70B to generate a response, which includes citations indicating which document the information came from.
-	5.	Testing the System
-	•	The generate_response function is tested with a general query and one with a document filter (to retrieve information only from document1.pdf).
-
-Key Features
-	•	Citation in response: Citations are added in the format [Source: document_name].
-	•	Metadata Filtering: The ability to filter the retrieved documents based on the document name.
-
-Would you like any adjustments or further details on how to deploy this as a web service?
+# Results
+print(f"Chi-Square Statistic: {chi2:.4f}")
+print(f"Degrees of Freedom: {dof}")
+print(f"P-Value: {p:.4f}")
+print("\nExpected Frequencies:\n", expected)
