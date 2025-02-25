@@ -1,14 +1,28 @@
-from scipy.stats import f_oneway
 import numpy as np
+from scipy.stats import chisquare
 
-# Example data: fraud rates (10 bands x 7 months)
-fraud_rates = np.random.rand(10, 7) * 0.05  # Replace with actual data
+# Example observed fraud counts for each month (7 months)
+observed_counts = np.array([20, 22, 18, 25, 19, 23, 21])
 
-# Perform one-way ANOVA
-anova_result = f_oneway(*[fraud_rates[:, i] for i in range(fraud_rates.shape[1])])
-print(f"F-Statistic: {anova_result.statistic:.4f}, P-Value: {anova_result.pvalue:.4f}")
+# For a uniform distribution, the expected count in each month is the same.
+# Calculate the expected counts by taking the total and dividing by the number of months.
+total_frauds = observed_counts.sum()
+num_months = len(observed_counts)
+expected_counts = np.full(shape=observed_counts.shape, fill_value=total_frauds / num_months)
 
-if anova_result.pvalue <= 0.05:
-    print("Fraud rates differ significantly across months.")
+# Display the observed and expected counts
+print("Observed counts:", observed_counts)
+print("Expected counts (Uniform Distribution):", expected_counts)
+
+# Perform the Chi-Square Goodness-of-Fit Test
+chi2_statistic, p_value = chisquare(f_obs=observed_counts, f_exp=expected_counts)
+
+# Output the test results
+print(f"\nChi-Square Statistic: {chi2_statistic:.4f}")
+print(f"P-value: {p_value:.4f}")
+
+# Interpret the results at a 5% significance level
+if p_value < 0.05:
+    print("Result: There is a significant difference in fraud counts across months.")
 else:
-    print("No significant difference in fraud rates across months.")
+    print("Result: There is no significant difference in fraud counts across months.")
