@@ -1,32 +1,14 @@
+from scipy.stats import f_oneway
 import numpy as np
-import pandas as pd
-from statsmodels.tsa.stattools import adfuller
 
-# Example fraud rates: 10 score bands x 7 months (replace with your actual data)
-fraud_rates = np.random.rand(10, 7) * 0.05  # Example rates between 0 and 5%
+# Example data: fraud rates (10 bands x 7 months)
+fraud_rates = np.random.rand(10, 7) * 0.05  # Replace with actual data
 
-# Convert to DataFrame for clarity
-months = [f'Month_{i+1}' for i in range(fraud_rates.shape[1])]
-score_bands = [f'Band_{i+1}' for i in range(fraud_rates.shape[0])]
-fraud_df = pd.DataFrame(fraud_rates, index=score_bands, columns=months)
+# Perform one-way ANOVA
+anova_result = f_oneway(*[fraud_rates[:, i] for i in range(fraud_rates.shape[1])])
+print(f"F-Statistic: {anova_result.statistic:.4f}, P-Value: {anova_result.pvalue:.4f}")
 
-# Perform ADF test for each score band
-adf_results = []
-for band in score_bands:
-    series = fraud_df.loc[band].values
-    adf_stat, p_value, lags, n_obs, crit_values, _ = adfuller(series, autolag='AIC')
-    adf_results.append({
-        'Score Band': band,
-        'ADF Statistic': adf_stat,
-        'P-Value': p_value,
-        'Lags Used': lags,
-        'Observations': n_obs,
-        '1% Critical Value': crit_values['1%'],
-        '5% Critical Value': crit_values['5%'],
-        '10% Critical Value': crit_values['10%'],
-        'Stationary': 'Yes' if p_value <= 0.05 else 'No'
-    })
-
-# Results in a DataFrame
-adf_results_df = pd.DataFrame(adf_results)
-print(adf_results_df)
+if anova_result.pvalue <= 0.05:
+    print("Fraud rates differ significantly across months.")
+else:
+    print("No significant difference in fraud rates across months.")
