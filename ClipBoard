@@ -1,28 +1,32 @@
 import numpy as np
-from scipy.stats import chisquare
+from scipy.stats import chi2_contingency
 
-# Example observed fraud counts for each month (7 months)
-observed_counts = np.array([20, 22, 18, 25, 19, 23, 21])
+# Example data:
+# Fraud counts for each month (7 months)
+fraud_counts = np.array([20, 22, 18, 25, 19, 23, 21])
 
-# For a uniform distribution, the expected count in each month is the same.
-# Calculate the expected counts by taking the total and dividing by the number of months.
-total_frauds = observed_counts.sum()
-num_months = len(observed_counts)
-expected_counts = np.full(shape=observed_counts.shape, fill_value=total_frauds / num_months)
+# Total transactions for each month
+total_transactions = np.array([1000, 1100, 1050, 1200, 1000, 1150, 1080])
 
-# Display the observed and expected counts
-print("Observed counts:", observed_counts)
-print("Expected counts (Uniform Distribution):", expected_counts)
+# Calculate non-fraud counts for each month
+non_fraud_counts = total_transactions - fraud_counts
 
-# Perform the Chi-Square Goodness-of-Fit Test
-chi2_statistic, p_value = chisquare(f_obs=observed_counts, f_exp=expected_counts)
+# Create a contingency table:
+# Rows: [Fraud cases, Non-fraud cases]
+# Columns: Each month (7 months)
+contingency_table = np.array([fraud_counts, non_fraud_counts])
 
-# Output the test results
-print(f"\nChi-Square Statistic: {chi2_statistic:.4f}")
-print(f"P-value: {p_value:.4f}")
+print("Contingency Table:")
+print(contingency_table)
 
-# Interpret the results at a 5% significance level
+# Perform the Chi-Square Test of Independence
+chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+
+print("\nChi-Square Statistic: {:.4f}".format(chi2_stat))
+print("Degrees of Freedom: {}".format(dof))
+print("P-Value: {:.4f}".format(p_value))
+
 if p_value < 0.05:
-    print("Result: There is a significant difference in fraud counts across months.")
+    print("Result: The fraud rate differs significantly across months.")
 else:
-    print("Result: There is no significant difference in fraud counts across months.")
+    print("Result: There is no significant difference in the fraud rate across months.")
