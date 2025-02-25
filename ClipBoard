@@ -1,26 +1,28 @@
 import numpy as np
 from scipy.stats import chisquare
 
-# Example fraud counts (converted from rates)
-fraud_counts = np.array([
-    [20, 20, 22],   # Low
-    [35, 41, 38],   # Medium
-    [50, 51, 55]    # High
-])
+# Example: Replace this with your actual 10x7 fraud counts data
+fraud_counts = np.random.randint(10, 100, size=(10, 7))  # Placeholder
 
 # Total fraud cases per score band
 totals = fraud_counts.sum(axis=1)
 
-# Expected distribution (if rates are constant, fraud evenly distributed across months)
-expected_ratios = fraud_counts.sum(axis=0) / fraud_counts.sum()  # overall monthly proportions
-expected_counts = np.array([totals[i] * expected_ratios for i in range(fraud_counts.shape[0])])
+# Overall monthly proportions
+overall_monthly_proportions = fraud_counts.sum(axis=0) / fraud_counts.sum()
+
+# Calculate expected counts per score band
+expected_counts = np.array([totals[i] * overall_monthly_proportions for i in range(fraud_counts.shape[0])])
 
 # Row-wise Chi-Square Goodness-of-Fit Tests
-score_bands = ['Low', 'Medium', 'High']
-
-for i, band in enumerate(score_bands):
+bands_failing = []
+for i in range(fraud_counts.shape[0]):
     chi2, p = chisquare(f_obs=fraud_counts[i], f_exp=expected_counts[i])
-    print(f"Score Band: {band}")
-    print(f"  Chi-Square Statistic: {chi2:.4f}")
-    print(f"  P-Value: {p:.4f}")
-    print("  -->", "Significant difference" if p <= 0.05 else "No significant difference", "\n")
+    print(f"Score Band {i + 1}: Chi-Square = {chi2:.4f}, P-Value = {p:.4f}")
+    if p <= 0.05:
+        bands_failing.append(i + 1)
+
+# Summary of failing bands
+if bands_failing:
+    print(f"\nScore bands failing the constant fraud rate assumption: {bands_failing}")
+else:
+    print("\nAll score bands have consistent fraud rates across months (no significant differences).")
