@@ -1,28 +1,107 @@
+The overall Chi-Square Test for Homogeneity tells us if there is a difference in fraud rates across months and score bands, but it does not indicate which month(s) caused the difference.
+
+To determine which month(s) failed, we need to conduct post-hoc analysis by examining:
+	1.	Contribution of each month to the Chi-Square statistic (via standardized residuals).
+	2.	Pairwise comparisons between months with proper multiple testing correction.
+
+Step 1: Analyze Standardized Residuals
+	•	Standardized residuals show how much each cell’s observed count deviates from the expected count.
+	•	A large absolute value (commonly > 2) suggests that the month-score band combination contributed significantly to the overall Chi-Square statistic.
+
+Python Implementation: Residual Analysis
+
 import numpy as np
-from scipy.stats import chisquare
+from scipy.stats import chi2_contingency
+import pandas as pd
 
-# Example: Replace this with your actual 10x7 fraud counts data
-fraud_counts = np.random.randint(10, 100, size=(10, 7))  # Placeholder
+# Example fraud counts: Replace this with actual data (10 score bands x 7 months)
+fraud_counts = np.random.randint(10, 100, size=(10, 7))
 
-# Total fraud cases per score band
-totals = fraud_counts.sum(axis=1)
+# Perform Chi-Square Test
+chi2, p, dof, expected = chi2_contingency(fraud_counts)
 
-# Overall monthly proportions
-overall_monthly_proportions = fraud_counts.sum(axis=0) / fraud_counts.sum()
+# Calculate standardized residuals
+standardized_residuals = (fraud_counts - expected) / np.sqrt(expected)
 
-# Calculate expected counts per score band
-expected_counts = np.array([totals[i] * overall_monthly_proportions for i in range(fraud_counts.shape[0])])
+# Convert to DataFrame for easy viewing
+months = [f'Month_{i+1}' for i in range(fraud_counts.shape[1])]
+score_bands = [f'Band_{i+1}' for i in range(fraud_counts.shape[0])]
+residuals_df = pd.DataFrame(standardized_residuals, index=score_bands, columns=months)
 
-# Row-wise Chi-Square Goodness-of-Fit Tests
-bands_failing = []
-for i in range(fraud_counts.shape[0]):
-    chi2, p = chisquare(f_obs=fraud_counts[i], f_exp=expected_counts[i])
-    print(f"Score Band {i + 1}: Chi-Square = {chi2:.4f}, P-Value = {p:.4f}")
-    if p <= 0.05:
-        bands_failing.append(i + 1)
+print(f"Chi-Square Statistic: {chi2:.4f}")
+print(f"P-Value: {p:.4f}\n")
+print("Standardized Residuals:\n", residuals_df)
 
-# Summary of failing bands
-if bands_failing:
-    print(f"\nScore bands failing the constant fraud rate assumption: {bands_failing}")
-else:
-    print("\nAll score bands have consistent fraud rates across months (no significant differences).")
+# Identify cells with |residual| > 2 (significant contributors)
+significant_cells = residuals_df[(residuals_df > 2) | (residuals_df < -2)]
+print("\nCells significantly contributing to Chi-Square (> |2| residual):\n", significant_cells.dropna(how='all'))
+
+Step 2: Interpret the Residuals
+	•	Residual > 2: The observed fraud count is significantly higher than expected.
+	•	Residual < -2: The observed fraud count is significantly lower than expected.
+	•	The months with the most cells exceeding ±2 are the likely sources of deviation.
+
+Step 3: Pairwise Chi-Square Tests Between Months
+
+If you want a more formal approach to detect which months differ, you can perform pairwise Chi-Square tests between months with Bonferroni correction.
+
+Python Implementation (Pairwise Month Comparisons):
+
+from itertools import combinations
+from scipy.stats import chi2_contingency
+
+# Pairwise comparisons between months
+month_indices = range(fraud_counts.shape[1])
+pairwise_results = []
+
+for (m1, m2) in combinations(month_indices, 2):
+    subset = fraud_counts[:, [m1, m2]]  # Select two months at a time
+    chi2_pair, p_pair, _, _ = chi2_contingency(subset)
+    pairwise_results.append((months[m1], months[m2], chi2_pair, p_pair))
+
+# Convert to DataFrame for better visualization
+pairwise_df = pd.DataFrame(pairwise_results, columns=['Month_1', 'Month_2', 'Chi2_Statistic', 'P_Value'])
+
+# Bonferroni correction
+alpha = 0.05
+num_tests = len(pairwise_results)
+alpha_adjusted = alpha / num_tests
+pairwise_df['Significant'] = pairwise_df['P_Value'] <= alpha_adjusted
+
+print(f"\nPairwise Chi-Square Tests (Bonferroni adjusted alpha = {alpha_adjusted:.4f}):\n")
+print(pairwise_df.sort_values(by='P_Value'))
+
+Step 4: Interpret Pairwise Results
+	•	Significant pairs (after Bonferroni correction): These month pairs have significantly different fraud rates.
+	•	This method pinpoints which specific months differ from each other.
+
+Step 5: Visualize Residuals (Optional)
+
+You can visualize standardized residuals as a heatmap to quickly spot problematic months:
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(12, 6))
+sns.heatmap(residuals_df, annot=True, cmap='coolwarm', center=0, cbar_kws={'label': 'Standardized Residuals'})
+plt.title('Standardized Residuals Heatmap (Contribution to Chi-Square Statistic)')
+plt.xlabel('Months')
+plt.ylabel('Score Bands')
+plt.show()
+
+Summary of Approach
+	1.	Run overall Chi-Square test.
+	2.	Compute standardized residuals to see which month-score band pairs deviate from expectation.
+	3.	Check residuals > |2| ⇒ These months/bands are likely sources of deviation.
+	4.	Conduct pairwise Chi-Square tests between months to confirm which months differ significantly (adjust for multiple testing).
+	5.	Visualize residuals for intuitive insights.
+
+When to Use Each Method
+
+Method	Use Case
+Standardized Residuals	Identifying specific month-band combinations causing deviation.
+Pairwise Chi-Square Tests	Identifying which months differ from each other after the overall test is significant.
+Logistic Regression	Modeling fraud probability with months and score bands as predictors.
+Cochran’s Q Test	Checking if proportions differ across multiple related groups (e.g., same customers over months).
+
+Would you like further explanations on interpreting the residuals or more advanced modeling approaches (e.g., GLMs or time series analysis)?
