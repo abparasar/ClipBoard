@@ -1,32 +1,125 @@
-import numpy as np
-from scipy.stats import chi2_contingency
 
-# Example data:
-# Fraud counts for each month (7 months)
-fraud_counts = np.array([20, 22, 18, 25, 19, 23, 21])
 
-# Total transactions for each month
-total_transactions = np.array([1000, 1100, 1050, 1200, 1000, 1150, 1080])
 
-# Calculate non-fraud counts for each month
-non_fraud_counts = total_transactions - fraud_counts
 
-# Create a contingency table:
-# Rows: [Fraud cases, Non-fraud cases]
-# Columns: Each month (7 months)
-contingency_table = np.array([fraud_counts, non_fraud_counts])
+Alright! Imagine you have a big book written in a language you don’t understand. If you want a computer to read and understand it, you need to break it into smaller pieces—like words or even smaller parts—so the computer can work with them.
 
-print("Contingency Table:")
-print(contingency_table)
+This breaking-down process is called tokenization. It helps the computer turn a long sentence into tiny chunks (tokens) that it can understand and process. Without tokenization, the computer would see a sentence as one giant mess and wouldn’t know where one word ends and another begins!
 
-# Perform the Chi-Square Test of Independence
-chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+For example, if you give the computer:
+“I love ice cream”
 
-print("\nChi-Square Statistic: {:.4f}".format(chi2_stat))
-print("Degrees of Freedom: {}".format(dof))
-print("P-Value: {:.4f}".format(p_value))
+Tokenization turns it into:
+	1.	“I”
+	2.	“love”
+	3.	“ice”
+	4.	“cream”
 
-if p_value < 0.05:
-    print("Result: The fraud rate differs significantly across months.")
-else:
-    print("Result: There is no significant difference in the fraud rate across months.")
+Now, the encoder (which helps the computer understand meaning) can work with these pieces more easily!
+
+Great question! Computers don’t understand words like humans do—they only understand numbers.
+
+Imagine you’re playing a video game, and your character has a special code instead of a name, like Player_1234. The game doesn’t “see” your name; it just works with numbers behind the scenes.
+
+Similarly, if we give a computer the words “I love ice cream”, it won’t know what they mean. But if we turn each word into a number, like:
+	•	“I” → 1
+	•	“love” → 42
+	•	“ice” → 85
+	•	“cream” → 128
+
+Now the computer can process the numbers and 
+find patterns, similarities, and meanings between
+ them. This is how encoders help computers 
+understand language!
+Great thinking! Why not just turn words into vectors directly? Well, tokenization makes the process more efficient and flexible. Here’s why:
+
+1. Words Can Be Split into Smaller Parts (Subwords)
+	•	Imagine the words “unhappiness” and “happiness.” If we only convert whole words to vectors, we need a separate vector for both.
+	•	But if we tokenize them into [“un”, “happiness”], we can reuse “happiness” and only learn “un” separately. This helps when dealing with new words!
+
+2. Limited Vocabulary Issue
+	•	If we turn every whole word into a vector, we’d need a dictionary with millions of words. But tokenization lets us reuse common parts, so we don’t need a giant dictionary.
+
+3. Better for Different Languages
+	•	Some languages, like Chinese, don’t have spaces between words. Tokenization helps break them into meaningful parts before converting them into vectors.
+
+4. More Efficient Computation
+	•	Instead of creating a separate vector for every possible word, tokenization reduces the number of unique things the model has to learn, making training and processing much faster!
+
+So, tokenization first breaks text into useful pieces, and then we turn them into vectors for the computer to understand. It’s like chopping vegetables before cooking—it makes everything easier!
+
+
+
+Great thinking! Why not just turn words into vectors directly? Well, tokenization makes the process more efficient and flexible. Here’s why:
+
+1. Words Can Be Split into Smaller Parts (Subwords)
+	•	Imagine the words “unhappiness” and “happiness.” If we only convert whole words to vectors, we need a separate vector for both.
+	•	But if we tokenize them into [“un”, “happiness”], we can reuse “happiness” and only learn “un” separately. This helps when dealing with new words!
+
+2. Limited Vocabulary Issue
+	•	If we turn every whole word into a vector, we’d need a dictionary with millions of words. But tokenization lets us reuse common parts, so we don’t need a giant dictionary.
+
+3. Better for Different Languages
+	•	Some languages, like Chinese, don’t have spaces between words. Tokenization helps break them into meaningful parts before converting them into vectors.
+
+4. More Efficient Computation
+	•	Instead of creating a separate vector for every possible word, tokenization reduces the number of unique things the model has to learn, making training and processing much faster!
+
+So, tokenization first breaks text into useful pieces, and then we turn them into vectors for the computer to understand. It’s like chopping vegetables before cooking—it makes everything easier!
+
+
+
+          ┌──────────────────┐  
+          │   Input Text     │  
+          └────────▲─────────┘  
+                   │  
+                   ▼  
+          ┌──────────────────┐  
+          │  Normalization   │  (Lowercasing, removing special characters)  
+          └────────▲─────────┘  
+                   │  
+                   ▼  
+          ┌──────────────────┐  
+          │ Splitting Tokens │  (Word, subword, or character level)  
+          └────────▲─────────┘  
+                   │  
+                   ▼  
+          ┌──────────────────┐  
+          │ Assign Token IDs │  (Map tokens to numbers using a vocabulary)  
+          └────────▲─────────┘  
+                   │  
+                   ▼  
+          ┌──────────────────┐  
+          │ Output Tokens/IDs│  (Final tokenized text ready for processing)  
+          └──────────────────┘  
+
+This process makes text easier for computers to understand and process efficiently!
+
+
+Major Difference Between Tokenization and Embedding
+
+Tokenization is about breaking text into smaller units (tokens) and mapping them to unique numerical IDs. It prepares text for further processing.
+
+Embedding is about converting these token IDs into dense numerical vectors that capture meaning and relationships between words.
+
+Example:
+
+Sentence: "I love ice cream"
+	1.	Tokenization → Converts words into tokens and assigns IDs:
+	•	"I" → 101
+	•	"love" → 234
+	•	"ice" → 567
+	•	"cream" → 890
+	2.	Embedding → Converts token IDs into meaningful numerical vectors:
+	•	101 → [0.1, 0.3, -0.2, …]
+	•	234 → [0.5, -0.1, 0.8, …]
+	•	567 → [-0.3, 0.7, 0.2, …]
+	•	890 → [0.6, -0.4, 0.9, …]
+
+Key Difference:
+	•	Tokenization = Breaking text into pieces & assigning IDs
+	•	Embedding = Converting IDs into meaningful number representations
+
+
+
+
