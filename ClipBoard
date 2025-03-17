@@ -2,24 +2,36 @@
 import pandas as pd
 from openpyxl import load_workbook
 
-# Load workbook
+# Specify file and columns to read
 file_path = "your_file.xlsx"
+columns_to_read = ["Column1", "Column3"]  # Update with actual column names
+
+# Read only selected columns (text values)
+df = pd.read_excel(file_path, usecols=columns_to_read)
+
+# Load workbook using openpyxl
 wb = load_workbook(file_path, data_only=True)
-ws = wb.active  # Use the first sheet (modify as needed)
+ws = wb.active  # Use the first sheet (modify if needed)
 
-# Extract hyperlinks
-links = []
-for row in ws.iter_rows():
-    for cell in row:
-        if cell.hyperlink:
-            links.append(cell.hyperlink.target)
-        else:
-            links.append(cell.value)  # Store normal text if no hyperlink
+# Extract hyperlinks from the specified columns
+for col in columns_to_read:
+    df[col + "_link"] = None  # Create a new column for links
 
-# Convert to DataFrame
-df = pd.DataFrame(links)
+    # Find the correct column index in the Excel sheet
+    col_index = None
+    for cell in ws[1]:  # Assuming first row contains headers
+        if cell.value == col:
+            col_index = cell.column  # Get 1-based index
+            break
+
+    if col_index:
+        links = []
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=col_index, max_col=col_index):
+            cell = row[0]
+            links.append(cell.hyperlink.target if cell.hyperlink else None)
+        df[col + "_link"] = links  # Add hyperlinks to the DataFrame
+
 print(df)
-
 \documentclass{article}
 \usepackage{array}
 
