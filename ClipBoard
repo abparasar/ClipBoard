@@ -1,3 +1,25 @@
+
+import pandas as pd
+from openpyxl import load_workbook
+
+# Load workbook
+file_path = "your_file.xlsx"
+wb = load_workbook(file_path, data_only=True)
+ws = wb.active  # Use the first sheet (modify as needed)
+
+# Extract hyperlinks
+links = []
+for row in ws.iter_rows():
+    for cell in row:
+        if cell.hyperlink:
+            links.append(cell.hyperlink.target)
+        else:
+            links.append(cell.value)  # Store normal text if no hyperlink
+
+# Convert to DataFrame
+df = pd.DataFrame(links)
+print(df)
+
 \documentclass{article}
 \usepackage{array}
 
