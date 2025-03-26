@@ -1,21 +1,13 @@
 import pandas as pd
-import numpy as np
 
-# Sample DataFrame with scores, number of goods, and number of bads
-df = pd.DataFrame({
-    "score": [999, 998, 997],  # Example scores
-    "goods": [3, 2, 1],        # Number of good cases
-    "bads": [2, 1, 3]          # Number of bad cases
-})
+# Define the Excel file path
+excel_file = "input.xlsx"
 
-# Function to expand the dataset
-def expand_rows(row):
-    goods_rows = pd.DataFrame({"score": [row["score"]] * row["goods"], "mark": 0})
-    bads_rows = pd.DataFrame({"score": [row["score"]] * row["bads"], "mark": 1})
-    return pd.concat([goods_rows, bads_rows])
+# Read all sheets into a dictionary of DataFrames
+sheets_dict = pd.read_excel(excel_file, sheet_name=None)
 
-# Apply the function to each row and properly concatenate
-expanded_df = pd.concat(list(df.apply(expand_rows, axis=1)), ignore_index=True)
-
-# Display the new expanded dataset
-print(expanded_df)
+# Loop through each sheet and save it as a CSV file
+for sheet_name, df in sheets_dict.items():
+    csv_filename = f"{sheet_name}.csv"  # Name the CSV file as the sheet name
+    df.to_csv(csv_filename, index=False)  # Save without index
+    print(f"Saved {csv_filename}")
