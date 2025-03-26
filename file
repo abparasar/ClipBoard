@@ -10,12 +10,12 @@ df = pd.DataFrame({
 
 # Function to expand the dataset
 def expand_rows(row):
-    goods_rows = pd.DataFrame({"score": np.repeat(row["score"], row["goods"]), "mark": 0})
-    bads_rows = pd.DataFrame({"score": np.repeat(row["score"], row["bads"]), "mark": 1})
+    goods_rows = pd.DataFrame({"score": [row["score"]] * row["goods"], "mark": 0})
+    bads_rows = pd.DataFrame({"score": [row["score"]] * row["bads"], "mark": 1})
     return pd.concat([goods_rows, bads_rows])
 
-# Apply the function to each row and concatenate results
-expanded_df = pd.concat(df.apply(expand_rows, axis=1), ignore_index=True)
+# Apply the function to each row and properly concatenate
+expanded_df = pd.concat(list(df.apply(expand_rows, axis=1)), ignore_index=True)
 
 # Display the new expanded dataset
 print(expanded_df)
