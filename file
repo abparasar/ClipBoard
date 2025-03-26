@@ -1,17 +1,20 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Sample DataFrame
-df = pd.DataFrame({
+# Sample DataFrames with different sizes
+df1 = pd.DataFrame({
     "FPR1": [0.1, 0.2, 0.3, 0.4, 0.5],
-    "FDR1": [0.9, 0.8, 0.7, 0.6, 0.5],
-    "FPR2": [0.1, 0.2, 0.3, 0.4, 0.5],
-    "FDR2": [0.85, 0.75, 0.65, 0.55, 0.45]
+    "FDR1": [0.9, 0.8, 0.7, 0.6, 0.5]
 })
 
-# Plot the two lines
-plt.plot(df["FPR1"], df["FDR1"], marker='o', linestyle='-', label="FDR1 vs FPR1")
-plt.plot(df["FPR2"], df["FDR2"], marker='s', linestyle='--', label="FDR2 vs FPR2")
+df2 = pd.DataFrame({
+    "FPR2": [0.15, 0.25, 0.35, 0.45],  # Different length
+    "FDR2": [0.85, 0.75, 0.65, 0.55]
+})
+
+# Plot both lines
+plt.plot(df1["FPR1"], df1["FDR1"], marker='o', linestyle='-', label="FDR1 vs FPR1")
+plt.plot(df2["FPR2"], df2["FDR2"], marker='s', linestyle='--', label="FDR2 vs FPR2")
 
 # Labels and title
 plt.xlabel("FPR")
