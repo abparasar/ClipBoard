@@ -1,0 +1,15 @@
+import pandas as pd
+
+# Create some sample data
+data = {
+    "Sheet1": pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]}),
+    "Sheet2": pd.DataFrame({"X": [10, 20, 30], "Y": [40, 50, 60]}),
+    "Sheet3": pd.DataFrame({"M": [100, 200, 300], "N": [400, 500, 600]})
+}
+
+# Create an Excel file with multiple sheets
+with pd.ExcelWriter("output.xlsx", engine="openpyxl") as writer:
+    for sheet_name, df in data.items():
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+print("Excel file created successfully!")
