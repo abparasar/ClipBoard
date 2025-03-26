@@ -1,34 +1,14 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 
-# Define the output Excel file
-file_name = "output.xlsx"
+# Sample DataFrame
+data = {
+    'Category': ['A', 'B', 'A', 'B', 'A', 'B'],
+    'Value1': [10, 20, 30, 40, 50, 60],
+    'Value2': [5, 15, 25, 35, 45, 55]
+}
+df = pd.DataFrame(data)
 
-# Create an Excel writer object
-with pd.ExcelWriter(file_name, engine="xlsxwriter") as writer:
-    # Sample DataFrame
-    df = pd.DataFrame({"X": [1, 2, 3, 4, 5], "Y": [10, 20, 30, 40, 50]})
-    
-    # Save DataFrame to an Excel sheet
-    df.to_excel(writer, sheet_name="Data", index=False)
-    
-    # Create a Matplotlib plot
-    plt.figure(figsize=(6, 4))
-    plt.plot(df["X"], df["Y"], marker="o", linestyle="-")
-    plt.xlabel("X-axis")
-    plt.ylabel("Y-axis")
-    plt.title("Sample Plot")
-    
-    # Save the plot as an image
-    plot_filename = "plot.png"
-    plt.savefig(plot_filename)
-    plt.close()  # Close the figure to free memory
+# Group by 'Category' and sum 'Value1' and 'Value2'
+grouped_df = df.groupby('Category')[['Value1', 'Value2']].sum().reset_index()
 
-    # Get the xlsxwriter workbook and worksheet objects
-    workbook = writer.book
-    worksheet = writer.sheets["Data"]  # Insert plot in the same sheet as data
-
-    # Insert the plot image into the Excel file
-    worksheet.insert_image("D2", plot_filename)
-
-print(f"Excel file '{file_name}' created successfully with data and a plot.")
+print(grouped_df)
