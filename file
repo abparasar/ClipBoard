@@ -1,47 +1,14 @@
-\documentclass{article}
-\usepackage{graphicx}
-\usepackage{subcaption}
+import pandas as pd
 
-\begin{document}
+# Initialize an empty DataFrame
+df = pd.DataFrame(columns=['score', 'FPR', 'FDR'])
 
-\begin{figure}[h]
-    \centering
-    % First row
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{image1.jpg}
-        \caption{Caption 1}
-    \end{subfigure}
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{image2.jpg}
-        \caption{Caption 2}
-    \end{subfigure}
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{image3.jpg}
-        \caption{Caption 3}
-    \end{subfigure}
+# Sample data to insert
+data = [(100, 0.05, 0.10), (200, 0.04, 0.08), (300, 0.03, 0.06)]
 
-    % Second row
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{image4.jpg}
-        \caption{Caption 4}
-    \end{subfigure}
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{image5.jpg}
-        \caption{Caption 5}
-    \end{subfigure}
-    \begin{subfigure}{0.32\textwidth}
-        \centering
-        \includegraphics[width=\linewidth]{image6.jpg}
-        \caption{Caption 6}
-    \end{subfigure}
+# Insert rows in a loop
+for score, FPR, FDR in data:
+    df = pd.concat([df, pd.DataFrame({'score': [score], 'FPR': [FPR], 'FDR': [FDR]})], ignore_index=True)
 
-    \caption{Overall figure caption describing all six images.}
-    \label{fig:all_images}
-\end{figure}
-
-\end{document}
+# Print the final DataFrame
+print(df)
