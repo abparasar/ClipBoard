@@ -1,17 +1,2 @@
-import pandas as pd
-from IPython.core.display import display, HTML
-
-# Sample DataFrames
-df1 = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-df2 = pd.DataFrame({"X": [7, 8, 9], "Y": [10, 11, 12]})
-df3 = pd.DataFrame({"M": [13, 14, 15], "N": [16, 17, 18]})
-
-def display_side_by_side(*dfs, titles=[]):
-    html_str = ""
-    for i, df in enumerate(dfs):
-        title = f"<h3>{titles[i]}</h3>" if i < len(titles) else ""
-        html_str += f"{title}{df.to_html()}&nbsp;&nbsp;&nbsp;"
-    display(HTML(html_str))
-
-# Display three DataFrames with titles
-display_side_by_side(df1, df2, df3, titles=["DataFrame 1", "DataFrame 2", "DataFrame 3"])
+plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter())  
+plt.show()
