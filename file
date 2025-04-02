@@ -1,14 +1,1 @@
-import pandas as pd
-
-# Initialize an empty DataFrame
-df = pd.DataFrame(columns=['score', 'FPR', 'FDR'])
-
-# Sample data to insert
-data = [(100, 0.05, 0.10), (200, 0.04, 0.08), (300, 0.03, 0.06)]
-
-# Insert rows in a loop
-for score, FPR, FDR in data:
-    df = pd.concat([df, pd.DataFrame({'score': [score], 'FPR': [FPR], 'FDR': [FDR]})], ignore_index=True)
-
-# Print the final DataFrame
-print(df)
+for dir in */; do echo "$dir: $(find "$dir" -maxdepth 1 -type f -iname 'README.md' | wc -l)"; done
