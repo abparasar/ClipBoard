@@ -1,28 +1,34 @@
-from transformers import DataCollatorForSeq2Seq
+from transformers import DataCollatorForSeq2Seq, AdamW
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch
 
-# === DataLoader for full dataset ===
+# === DataLoader ===
 collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model, return_tensors="pt")
 dataloader = DataLoader(tokenized_dataset["train"], batch_size=1, collate_fn=collator)
 
-# === Set model to train mode ===
+# === Training Setup ===
 model.train()
-
-# === Optimizer (basic AdamW) ===
-from transformers import AdamW
 optimizer = AdamW(model.parameters(), lr=5e-5)
+num_epochs = 5
 
-# === Loop through batches ===
-for batch in tqdm(dataloader, desc="Training"):
-    batch = {k: v.to(device) for k, v in batch.items()}
+# === Epoch Loop ===
+for epoch in range(num_epochs):
+    print(f"\nEpoch {epoch + 1}/{num_epochs}")
     
-    outputs = model(**batch)
-    loss = outputs.loss
-    loss.backward()
+    total_loss = 0.0
+    for step, batch in enumerate(tqdm(dataloader, desc=f"Training Epoch {epoch + 1}")):
+        batch = {k: v.to(device) for k, v in batch.items()}
 
-    optimizer.step()
-    optimizer.zero_grad()
+        outputs = model(**batch)
+        loss = outputs.loss
 
-    print(f"Loss: {loss.item():.4f}")
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        total_loss += loss.item()
+        print(f"Step {step + 1} - Loss: {loss.item():.4f}")
+    
+    avg_loss = total_loss / len(dataloader)
+    print(f">>> Epoch {epoch + 1} Average Loss: {avg_loss:.4f}")
