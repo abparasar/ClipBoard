@@ -1,24 +1,54 @@
 from transformers import DataCollatorForSeq2Seq, AdamW
 from torch.utils.data import DataLoader
-import torch
 from tqdm import tqdm
+import torch
 
-# === DataLoader setup outside loop ===
+# === Assume you already have this ===
+# def compute_metrics(preds: List[str], labels: List[str]) -> Dict[str, float]:
+#     ...
+
+# === Loaders ===
 collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model, return_tensors="pt")
-dataloader = DataLoader(tokenized_dataset["train"], batch_size=1, collate_fn=collator)
+train_loader = DataLoader(tokenized_dataset["train"], batch_size=1, collate_fn=collator)
+val_loader = DataLoader(tokenized_dataset["validation"], batch_size=1, collate_fn=collator)
 
 # === Training Setup ===
 model.train()
 optimizer = AdamW(model.parameters(), lr=5e-5)
 num_epochs = 5
 
-# === Epoch Loop ===
+# === Evaluation function ===
+def evaluate(model, val_loader):
+    model.eval()
+    preds = []
+    labels = []
+
+    with torch.no_grad():
+        for batch in tqdm(val_loader, desc="Evaluating", leave=False):
+            batch = {k: v.to(device) for k, v in batch.items()}
+
+            generated_tokens = model.generate(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                max_length=64
+            )
+
+            decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+            decoded_labels = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
+
+            preds.extend(decoded_preds)
+            labels.extend(decoded_labels)
+
+    model.train()
+    return compute_metrics(preds, labels)
+
+# === Training Loop ===
 for epoch in range(num_epochs):
     print(f"\nEpoch {epoch + 1}/{num_epochs}")
     
     total_loss = 0.0
-    progress_bar = tqdm(dataloader, desc=f"Epoch {epoch + 1}", leave=False)
-    
+    progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}", leave=False)
+
     for step, batch in enumerate(progress_bar):
         batch = {k: v.to(device) for k, v in batch.items()}
 
@@ -32,5 +62,9 @@ for epoch in range(num_epochs):
         total_loss += loss.item()
         progress_bar.set_postfix({"loss": loss.item()})
 
-    avg_loss = total_loss / len(dataloader)
-    print(f">>> Epoch {epoch + 1} Average Loss: {avg_loss:.4f}")
+    avg_loss = total_loss / len(train_loader)
+    print(f">>> Epoch {epoch + 1} Average Train Loss: {avg_loss:.4f}")
+
+    # === Evaluation ===
+    metrics = evaluate(model, val_loader)
+    print(f">>> Epoch {epoch + 1} Validation Metrics: {metrics}")
