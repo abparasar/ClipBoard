@@ -1,3 +1,12 @@
-shap.summary_plot(shap_values, X)  # Summary plot
-shap.plots.waterfall(shap_values[0])  # Waterfall plot for first instance
-shap.plots.force(shap_values[0])  # Force plot for first instance
+from transformers import BartTokenizer, BartForConditionalGeneration
+import torch
+
+# Path to your locally saved model directory
+model_path = "/path/to/local_model"
+
+# Load tokenizer
+tokenizer = BartTokenizer.from_pretrained(model_path)
+
+# Load model and move to CUDA
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = BartForConditionalGeneration.from_pretrained(model_path).to(device)
