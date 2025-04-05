@@ -1,37 +1,74 @@
-from datasets import load_dataset, DatasetDict
-from transformers import BartTokenizer
-import torch
+Ah yes — the datasets library expects all files (train/val/test) to have the same schema (columns). If you’re getting this error:
 
-# Load the tokenizer (replace with local path if you have a local tokenizer)
-tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
+All datasets must have the same columns
 
-# Set your max lengths
-max_input_length = 1024
-max_target_length = 128
+…it means at least one of your .jsonl files is missing a key (e.g., "dialogue" or "summary") or has extra/unexpected keys.
 
-# Load the dataset from local .jsonl files
+⸻
+
+✅ How to Fix It
+
+Step 1: Check Column Names in Each File
+
+Quick Python snippet to check columns in each .jsonl file:
+
+import json
+
+for split in ["train", "dev", "test"]:
+    path = f"dialogsum/dialogsum.{split}.jsonl"
+    with open(path, "r") as f:
+        first_line = json.loads(next(f))
+        print(f"{split} columns: {list(first_line.keys())}")
+
+You should see something like:
+
+train columns: ['dialogue', 'summary']
+dev columns: ['dialogue', 'summary']
+test columns: ['dialogue', 'summary']
+
+If any of them are different (e.g. test is missing "summary"), Hugging Face will throw the error.
+
+⸻
+
+✅ Step 2: Normalize the Structure
+
+If the issue is that test set is missing summary, you have two options:
+
+Option A: Add placeholder summaries (if you want to load it anyway)
+
+def fix_missing_summary(input_path, output_path):
+    with open(input_path, 'r') as infile, open(output_path, 'w') as outfile:
+        for line in infile:
+            data = json.loads(line)
+            if "summary" not in data:
+                data["summary"] = ""
+            outfile.write(json.dumps(data) + "\n")
+
+# Run it for test file
+fix_missing_summary("dialogsum/dialogsum.test.jsonl", "dialogsum/dialogsum.test.fixed.jsonl")
+
+Then update data_files:
+
 data_files = {
     "train": "dialogsum/dialogsum.train.jsonl",
     "validation": "dialogsum/dialogsum.dev.jsonl",
-    "test": "dialogsum/dialogsum.test.jsonl"
+    "test": "dialogsum/dialogsum.test.fixed.jsonl"
 }
 
+
+
+⸻
+
+Option B: Load only train and validation for now
+
+data_files = {
+    "train": "dialogsum/dialogsum.train.jsonl",
+    "validation": "dialogsum/dialogsum.dev.jsonl"
+}
 raw_datasets = load_dataset("json", data_files=data_files)
 
-# Preprocessing function
-def preprocess_function(examples):
-    inputs = examples["dialogue"]
-    model_inputs = tokenizer(inputs, max_length=max_input_length, truncation=True)
 
-    # Tokenize targets
-    with tokenizer.as_target_tokenizer():
-        labels = tokenizer(examples["summary"], max_length=max_target_length, truncation=True)
 
-    model_inputs["labels"] = labels["input_ids"]
-    return model_inputs
+⸻
 
-# Tokenize the dataset
-tokenized_datasets = raw_datasets.map(preprocess_function, batched=True)
-
-# Optional: move batches to CUDA during training
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+Let me know what the columns look like and I can help clean them if needed!
