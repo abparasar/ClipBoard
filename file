@@ -1,9 +1,9 @@
 from transformers import DataCollatorForSeq2Seq, AdamW
 from torch.utils.data import DataLoader
-from tqdm import tqdm
 import torch
+from tqdm import tqdm
 
-# === DataLoader ===
+# === DataLoader setup outside loop ===
 collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model, return_tensors="pt")
 dataloader = DataLoader(tokenized_dataset["train"], batch_size=1, collate_fn=collator)
 
@@ -17,7 +17,9 @@ for epoch in range(num_epochs):
     print(f"\nEpoch {epoch + 1}/{num_epochs}")
     
     total_loss = 0.0
-    for step, batch in enumerate(tqdm(dataloader, desc=f"Training Epoch {epoch + 1}")):
+    progress_bar = tqdm(dataloader, desc=f"Epoch {epoch + 1}", leave=False)
+    
+    for step, batch in enumerate(progress_bar):
         batch = {k: v.to(device) for k, v in batch.items()}
 
         outputs = model(**batch)
@@ -28,7 +30,7 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
 
         total_loss += loss.item()
-        print(f"Step {step + 1} - Loss: {loss.item():.4f}")
-    
+        progress_bar.set_postfix({"loss": loss.item()})
+
     avg_loss = total_loss / len(dataloader)
     print(f">>> Epoch {epoch + 1} Average Loss: {avg_loss:.4f}")
