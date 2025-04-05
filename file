@@ -1,35 +1,93 @@
-from transformers import BartTokenizer, BartForConditionalGeneration
-import torch
+If you’re getting OOM even with per_device_train_batch_size=1 on a V100 32GB, that means something else is likely causing excessive memory use — probably sequence lengths or no gradient checkpointing. Let’s fix that systematically:
 
-# Load the tokenizer and model from local directory
-model_path = "./model"
-tokenizer = BartTokenizer.from_pretrained(model_path)
+⸻
+
+1. Reduce Sequence Lengths
+
+Even one BART input at 1024 tokens can eat a lot of memory. Try:
+
+max_input_length = 512  # Try 384 if needed
+max_target_length = 64  # Even 32 is OK for DialogSum
+
+Update your tokenizer code:
+
+inputs = tokenizer(example["dialogue"], max_length=512, truncation=True, padding="max_length")
+targets = tokenizer(example["summary"], max_length=64, truncation=True, padding="max_length")
+
+
+
+⸻
+
+2. Enable Gradient Checkpointing
+
+This saves memory by trading off some compute:
+
+model.gradient_checkpointing_enable()
+
+Add this line right after loading the model:
+
 model = BartForConditionalGeneration.from_pretrained(model_path)
+model.gradient_checkpointing_enable()
 
-# Move model to GPU if available
+
+
+⸻
+
+3. Use fp16 (Mixed Precision)
+
+With a V100, this should always be on:
+
+fp16=True
+
+
+
+⸻
+
+4. Double-Check That You Moved Everything to GPU
+
+Make sure both model and inputs are on CUDA:
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
+inputs = {k: v.to(device) for k, v in inputs.items()}
 
-# Input text to summarize
-text = """
-The DialogSum dataset is a large-scale dialogue summarization corpus, covering a wide range of real-life topics. It is 
-collected and constructed by annotating dialogues with corresponding summaries for training and evaluation of dialogue 
-summarization models.
-"""
 
-# Tokenize input
-inputs = tokenizer([text], max_length=1024, truncation=True, return_tensors="pt").to(device)
 
-# Generate summary
-summary_ids = model.generate(
-    inputs["input_ids"],
-    max_length=150,
-    min_length=40,
-    length_penalty=2.0,
-    num_beams=4,
-    early_stopping=True
-)
+⸻
 
-# Decode and print summary
-summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-print("Summary:", summary)
+5. Clear Cache Before Training Starts
+
+Just before training starts:
+
+import torch
+torch.cuda.empty_cache()
+
+
+
+⸻
+
+6. Monitor VRAM Live (to see spikes)
+
+Open another terminal:
+
+watch -n 0.5 nvidia-smi
+
+
+
+⸻
+
+Summary Fix Pack
+
+Set:
+	•	batch_size = 1
+	•	input_length = 384
+	•	target_length = 64
+	•	fp16 = True
+	•	gradient_checkpointing_enable()
+
+⸻
+
+If you’re still hitting OOM even after all that, send me:
+	•	Exact values of max_input_length, batch_size, etc.
+	•	What’s printed in nvidia-smi before crash
+	•	Or I can help you test one batch manually to confirm where the memory spikes. Want a test script for that?
