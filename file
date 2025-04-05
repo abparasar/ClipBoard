@@ -2,10 +2,27 @@ from transformers import DataCollatorForSeq2Seq, AdamW
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch
+import numpy as np
+import nltk
+import evaluate
 
-# === Assume you already have this ===
-# def compute_metrics(preds: List[str], labels: List[str]) -> Dict[str, float]:
-#     ...
+nltk.download("punkt")
+rouge = evaluate.load("rouge")
+
+# === ROUGE-based compute_metrics function ===
+def compute_metrics(preds, labels):
+    # Format predictions and labels for ROUGE
+    preds = ["\n".join(nltk.sent_tokenize(pred.strip())) for pred in preds]
+    labels = ["\n".join(nltk.sent_tokenize(label.strip())) for label in labels]
+
+    result = rouge.compute(predictions=preds, references=labels, use_stemmer=True)
+    result = {k: round(v.mid.fmeasure * 100, 4) for k, v in result.items()}
+
+    # Add average generated length
+    gen_lens = [len(pred.split()) for pred in preds]
+    result["gen_len"] = round(np.mean(gen_lens), 2)
+
+    return result
 
 # === Loaders ===
 collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model, return_tensors="pt")
@@ -30,11 +47,15 @@ def evaluate(model, val_loader):
             generated_tokens = model.generate(
                 input_ids=batch["input_ids"],
                 attention_mask=batch["attention_mask"],
-                max_length=64
+                max_length=64,
+                num_beams=4,
             )
 
             decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
-            decoded_labels = tokenizer.batch_decode(batch["labels"], skip_special_tokens=True)
+            # Fix -100 in labels for decoding
+            label_ids = batch["labels"].clone()
+            label_ids[label_ids == -100] = tokenizer.pad_token_id
+            decoded_labels = tokenizer.batch_decode(label_ids, skip_special_tokens=True)
 
             preds.extend(decoded_preds)
             labels.extend(decoded_labels)
