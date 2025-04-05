@@ -1,30 +1,56 @@
-If you’re getting OOM even with per_device_train_batch_size=1 on a V100 32GB, that means something else is likely causing excessive memory use — probably sequence lengths or no gradient checkpointing. Let’s fix that systematically:
+Thanks — that helps narrow it down.
+
+If the OOM is happening during fine-tuning on the DialogSum dataset, even with batch_size=1, that usually points to one (or both) of these:
 
 ⸻
 
-1. Reduce Sequence Lengths
+Root Causes
+	1.	Some dialogues are really long (over 1024 tokens) and cause a memory spike even with batch size 1.
+	2.	You’re not truncating or padding properly, so sequences vary in size and can blow up VRAM.
 
-Even one BART input at 1024 tokens can eat a lot of memory. Try:
+⸻
 
-max_input_length = 512  # Try 384 if needed
-max_target_length = 64  # Even 32 is OK for DialogSum
+Fix It Step-by-Step
 
-Update your tokenizer code:
+✅ 1. Add Truncation & Padding in Preprocessing
 
-inputs = tokenizer(example["dialogue"], max_length=512, truncation=True, padding="max_length")
-targets = tokenizer(example["summary"], max_length=64, truncation=True, padding="max_length")
+Update your preprocess function like this:
+
+def preprocess(example):
+    model_inputs = tokenizer(
+        example["dialogue"],
+        max_length=512,
+        padding="max_length",
+        truncation=True,
+    )
+    
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(
+            example["summary"],
+            max_length=64,
+            padding="max_length",
+            truncation=True,
+        )
+    
+    model_inputs["labels"] = labels["input_ids"]
+    return model_inputs
 
 
 
 ⸻
 
-2. Enable Gradient Checkpointing
+✅ 2. Manually Check Max Lengths (for sanity)
 
-This saves memory by trading off some compute:
+Run this before training:
 
-model.gradient_checkpointing_enable()
+dialogue_lengths = [len(tokenizer(dialogue)["input_ids"]) for dialogue in dataset["train"]["dialogue"]]
+print("Max dialogue token length:", max(dialogue_lengths))
 
-Add this line right after loading the model:
+If you see values close to 1024+, that’s your issue.
+
+⸻
+
+✅ 3. Enable gradient_checkpointing
 
 model = BartForConditionalGeneration.from_pretrained(model_path)
 model.gradient_checkpointing_enable()
@@ -33,9 +59,9 @@ model.gradient_checkpointing_enable()
 
 ⸻
 
-3. Use fp16 (Mixed Precision)
+✅ 4. Ensure fp16=True
 
-With a V100, this should always be on:
+When you use TrainingArguments, set:
 
 fp16=True
 
@@ -43,51 +69,25 @@ fp16=True
 
 ⸻
 
-4. Double-Check That You Moved Everything to GPU
+Want to Test It Safely First?
 
-Make sure both model and inputs are on CUDA:
+Here’s a mini script to test a single training batch before running a full train:
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-inputs = {k: v.to(device) for k, v in inputs.items()}
+from torch.utils.data import DataLoader
 
+train_dataloader = DataLoader(tokenized_dataset["train"], batch_size=1)
+batch = next(iter(train_dataloader))
+batch = {k: v.to(model.device) for k, v in batch.items()}
 
+outputs = model(**batch)
+loss = outputs.loss
+loss.backward()
+print("Single batch forward + backward passed.")
 
-⸻
-
-5. Clear Cache Before Training Starts
-
-Just before training starts:
-
-import torch
-torch.cuda.empty_cache()
-
-
+If this crashes, the problem is likely input length or padding.
 
 ⸻
 
-6. Monitor VRAM Live (to see spikes)
-
-Open another terminal:
-
-watch -n 0.5 nvidia-smi
-
-
-
-⸻
-
-Summary Fix Pack
-
-Set:
-	•	batch_size = 1
-	•	input_length = 384
-	•	target_length = 64
-	•	fp16 = True
-	•	gradient_checkpointing_enable()
-
-⸻
-
-If you’re still hitting OOM even after all that, send me:
-	•	Exact values of max_input_length, batch_size, etc.
-	•	What’s printed in nvidia-smi before crash
-	•	Or I can help you test one batch manually to confirm where the memory spikes. Want a test script for that?
+Would you like me to:
+	•	Send a debug-ready minimal script for just one training step?
+	•	Help trim the longest dialogues before training? (filter dataset)
