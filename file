@@ -1,2 +1,136 @@
-def naive_sent_tokenize(text):
-    return text.strip().split('. ')  # crude, but avoids punkt
+The difference between fine-tuning and prompt engineering for GPT (or any large language model) comes down to how you’re adapting the model to perform a specific task or behave in a certain way:
+
+⸻
+
+Prompt Engineering
+
+What it is:
+Crafting smart prompts (questions or instructions) to get the model to behave the way you want without changing the model itself.
+
+Example:
+You want GPT to summarize news articles?
+Prompt:
+“Summarize the following article in one paragraph: [article text]”
+
+Key points:
+	•	No retraining needed.
+	•	Quick and flexible.
+	•	Good for many use cases.
+	•	May not perform well on highly specialized or niche tasks.
+
+⸻
+
+Fine-Tuning
+
+What it is:
+Actually retraining the model (or part of it) using new labeled examples so it learns new behavior or knowledge.
+
+Example:
+You fine-tune GPT on a dataset of customer support conversations so it becomes really good at answering in your company’s tone and style.
+
+Key points:
+	•	Requires training data and compute resources.
+	•	More accurate for domain-specific tasks.
+	•	Changes the model weights (custom version of GPT).
+	•	More time-consuming and technical.
+
+⸻
+
+Analogy:
+	•	Prompt engineering is like giving better instructions to a smart assistant.
+	•	Fine-tuning is like teaching the assistant new skills or knowledge.
+Perfect — here’s a data scientist-style comparison of prompt engineering vs. fine-tuning, focusing on key aspects like data, complexity, performance, and when to use which:
+
+Aspect	Prompt Engineering	Fine-Tuning
+Effort (Dev/Infra)	Low: No model training required	High: Requires training pipeline, GPU, model checkpointing
+Data Requirement	None or minimal (single prompt or few-shot examples)	High: Needs a labeled dataset (100s to 100k+ examples)
+Cost	Cheap: Inference-only	Expensive: Compute + storage for fine-tuning
+Latency	Standard LLM inference latency	May increase if running a larger or custom model
+Use Case Fit	General-purpose, flexible	Domain-specific or task-specific (e.g., legal, medical, etc.)
+Performance (Accuracy)	Good enough for many tasks; limited ceiling	Higher ceiling for niche or structured tasks
+Model Control	Limited to what the model already knows + prompt tricks	Full control over output style, tone, and logic
+Versioning	No new model versions — just store prompt templates	You manage and deploy a custom model checkpoint
+Maintenance	Easy to maintain and iterate	Harder: requires retraining for data drift, etc.
+
+
+
+⸻
+
+When to Use What (as a DS):
+	•	Prompt Engineering:
+	•	Rapid prototyping or POCs.
+	•	Tasks with low to medium complexity.
+	•	You’re using GPT as an API and can’t or don’t want to retrain.
+	•	Fine-Tuning:
+	•	High-precision or domain-specific NLP tasks.
+	•	Your prompts are getting too long/complex.
+	•	You’re seeing diminishing returns from prompt iteration.
+	•	You need structured output, consistent format, or task-specific behavior.
+
+⸻
+Great — here’s a technical comparison from a model architecture perspective between prompt engineering and fine-tuning, specifically focusing on model weights, tokenization, layers, and training behavior:
+
+⸻
+
+1. Model Weights
+
+	Prompt Engineering	Fine-Tuning
+Model Weights	Unchanged – uses pretrained weights as-is	Modified – updates (some or all) weights based on new data
+Checkpoint	Uses original (e.g., gpt-3.5, LLaMA 3, etc.)	Creates a new checkpoint after training
+Backpropagation	Not used	Required – to update weights through gradient descent
+
+
+
+⸻
+
+2. Tokenization
+
+	Prompt Engineering	Fine-Tuning
+Tokenizer	Uses pretrained tokenizer (e.g., BPE, SentencePiece)	Same tokenizer as the base model must be used
+Custom Tokens	Can’t add new tokens	Can extend tokenizer (e.g., add domain-specific tokens)
+Embedding Layer	Remains frozen	Can be fine-tuned or extended if new tokens are added
+
+
+
+⸻
+
+3. Layers Affected
+
+	Prompt Engineering	Fine-Tuning
+Embedding Layer	Unchanged	Optionally fine-tuned
+Attention Layers	Fixed during inference	Can be fine-tuned (typically all layers, or via LoRA adapters)
+Output Head	Pretrained LM head used	Can be replaced (e.g., for classification, summarization)
+LoRA / PEFT	Not used	Optionally used to reduce fine-tuning cost and time
+
+
+
+⸻
+
+4. Training Behavior
+
+	Prompt Engineering	Fine-Tuning
+Training Loop	N/A (just inference)	Uses full/partial training loop
+Loss Function	N/A	Task-specific (e.g., cross-entropy, MSE)
+Optimizers	N/A	AdamW, etc.
+Learning Rate	N/A	Tuned as part of training
+
+
+
+⸻
+
+Summary (TL;DR):
+
+Component	Prompt Engineering	Fine-Tuning
+Weights	Frozen	Updated
+Tokenizer	Fixed	Can be extended
+Layers Affected	None	All or some (e.g., adapter layers)
+Training Required	No	Yes
+New Model Output	No	Yes – custom model
+
+
+
+⸻
+
+Let me know if you want visual diagrams or code examples of fine-tuning vs. prompting at the HuggingFace/Transformers level.
+Want a code-level comparison next? I can show prompt vs. fine-tuned usage side-by-side (e.g., summarization or classification).
+Let me know if you want examples or when to choose one over the other.
