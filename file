@@ -1,7 +1,2 @@
-from datasets import Dataset
-
-# Load dataset from a directory containing the .arrow file
-dataset = Dataset.load_from_disk("path_to_directory_containing_arrow_file")
-
-print(dataset)
-print(dataset[0])
+with open("your_file.arrow", "rb") as f:
+    print(f.read(16))
