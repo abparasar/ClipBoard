@@ -1,12 +1,7 @@
-import pyarrow as pa
-import pyarrow.ipc as ipc
+from datasets import Dataset
 
-# Open the file in binary mode
-with open("your_file.arrow", "rb") as f:
-    reader = ipc.RecordBatchFileReader(f)
-    table = reader.read_all()
+# Load dataset from a directory containing the .arrow file
+dataset = Dataset.load_from_disk("path_to_directory_containing_arrow_file")
 
-# Convert to pandas DataFrame if needed
-df = table.to_pandas()
-
-print(df.head())
+print(dataset)
+print(dataset[0])
