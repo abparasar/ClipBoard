@@ -1,34 +1,12 @@
-from transformers import BartForConditionalGeneration
-from transformers.utils.model_parallel_utils import infer_auto_device_map
-from accelerate import init_empty_weights
+import pyarrow as pa
+import pyarrow.ipc as ipc
 
-# Step 1: Create the model structure without loading weights
-with init_empty_weights():
-    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
+# Open the file in binary mode
+with open("your_file.arrow", "rb") as f:
+    reader = ipc.RecordBatchFileReader(f)
+    table = reader.read_all()
 
-# Step 2: Manually set max memory for GPUs 1, 2, 3
-max_memory = {
-    1: "20GiB",
-    2: "20GiB",
-    3: "20GiB"
-}
+# Convert to pandas DataFrame if needed
+df = table.to_pandas()
 
-# Step 3: Tell HF not to split encoder/decoder layers
-no_split_classes = ["BartEncoderLayer", "BartDecoderLayer"]
-
-# Step 4: Auto-infer a multi-GPU device map (excluding GPU 0)
-device_map = infer_auto_device_map(
-    model,
-    max_memory=max_memory,
-    no_split_module_classes=no_split_classes
-)
-
-# Step 5: Actually load the model with that device map
-model = BartForConditionalGeneration.from_pretrained(
-    "facebook/bart-large-cnn",
-    device_map=device_map,
-    low_cpu_mem_usage=True
-)
-
-# Optional: Print to verify layer distribution
-print(device_map)
+print(df.head())
