@@ -1,11 +1,14 @@
-from datasets import load_dataset
-
-raw_train = load_dataset("json", data_files=TRAIN_FILE, split="train")
-raw_val = load_dataset("json", data_files=VAL_FILE, split="train")  # 'train' because it's single-split load
-raw_test = load_dataset("json", data_files=TEST_FILE, split="train")
-
-raw_datasets = {
-    "train": raw_train,
-    "validation": raw_val,
-    "test": raw_test
-}
+training_args = Seq2SeqTrainingArguments(
+    output_dir=OUTPUT_DIR,
+    per_device_train_batch_size=2,
+    per_device_eval_batch_size=2,
+    num_train_epochs=EPOCHS,
+    learning_rate=LEARNING_RATE,
+    evaluation_strategy="epoch",
+    save_strategy="epoch",
+    logging_strategy="steps",
+    logging_steps=100,
+    save_total_limit=2,
+    fp16=False,  # turn off mixed precision for now
+    report_to="none"
+)
