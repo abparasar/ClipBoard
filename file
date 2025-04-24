@@ -1,0 +1,13 @@
+import pandas as pd
+
+# Initialize DataFrame with columns A to F
+def create_dataframe():
+    columns = ['A', 'B', 'C', 'D', 'E', 'F']
+    return pd.DataFrame(columns=columns)
+
+# Append a row (as list) to the DataFrame
+def add_row(df, row):
+    if len(row) != 6:
+        raise ValueError("Row must have exactly 6 elements for columns A to F.")
+    new_row = pd.DataFrame([row], columns=df.columns)
+    return pd.concat([df, new_row], ignore_index=True)
