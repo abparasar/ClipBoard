@@ -1,5 +1,86 @@
-# Uninstall existing PyTorch
-!pip uninstall torch torchvision torchaudio -y
+# --- 1. GPU Check ---
+import torch
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Using device: {device}")
 
-# Install compatible older PyTorch version
-!pip install torch==1.10.0 torchvision==0.11.1 torchaudio==0.10.0
+# --- 2. Install dependencies ---
+!git clone https://github.com/neuralchen/SimSwap
+%cd SimSwap
+!pip install -r requirements.txt
+!pip install insightface==0.2.1 onnxruntime moviepy
+
+# --- 3. Download pretrained models (manual, safe links) ---
+!mkdir -p arcface_model
+!mkdir -p checkpoints/people
+
+# Download ArcFace model
+!wget https://github.com/neuralchen/SimSwap/releases/download/1.0/arcface_checkpoint.tar -P ./arcface_model/
+
+# Download SimSwap checkpoint
+!wget https://github.com/neuralchen/SimSwap/releases/download/1.0/checkpoints.zip
+!unzip checkpoints.zip -d checkpoints/
+!mv checkpoints/people/epoch_00020.pth checkpoints/people/
+
+# --- 4. Extract ArcFace model ---
+!tar -xvf arcface_model/arcface_checkpoint.tar -C arcface_model/
+
+# --- 5. Setup imports ---
+import os
+import cv2
+import numpy as np
+from models.models import create_model
+from util import util
+from PIL import Image
+
+# --- 6. Load SimSwap Model Safely ---
+opt = util.parse_options('opt/configs/test_ttp.yaml')  # or test_ttp_simple.yaml depending
+model = create_model(opt)
+model.load_networks('checkpoints/people/epoch_00020.pth')
+model.eval()
+model = model.to(device)
+
+# --- 7. Load ArcFace Model Safely ---
+import sys
+sys.path.append('./arcface_model')
+from models import iresnet
+arcface = iresnet.iresnet100(pretrained=False)
+arcface.load_state_dict(torch.load('arcface_model/backbone.pth', map_location='cpu'))
+arcface = arcface.eval().to(device)
+
+# --- 8. Upload Source Face and Target Image ---
+from google.colab import files
+uploaded = files.upload()
+
+# Assuming you upload: source.jpg (face you want) and target.jpg (face you want to replace)
+
+# --- 9. Swap Face ---
+
+# Load images
+source_img = Image.open('source.jpg').convert('RGB')
+target_img = Image.open('target.jpg').convert('RGB')
+
+# Resize
+source_img = source_img.resize((224, 224))
+target_img = target_img.resize((224, 224))
+
+# To tensor
+source_tensor = util.trans(source_img).unsqueeze(0).to(device)
+target_tensor = util.trans(target_img).unsqueeze(0).to(device)
+
+# Extract identity
+id_embedding = arcface(source_tensor)
+
+# Forward SimSwap
+with torch.no_grad():
+    swapped_img = model(source=target_tensor, id=id_embedding)
+
+# Convert back to image
+swapped_img = swapped_img.squeeze().cpu().numpy().transpose(1,2,0)
+swapped_img = (swapped_img * 255).astype(np.uint8)
+
+# Save swapped image
+cv2.imwrite('swapped_face.jpg', swapped_img[:,:,::-1])  # BGR to RGB
+
+# Show result
+from IPython.display import Image as IPImage, display
+display(IPImage('swapped_face.jpg'))
