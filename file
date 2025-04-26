@@ -1,34 +1,5 @@
-# --- 7. Setup imports ---
-import os
-import cv2
-import numpy as np
-from PIL import Image
-from types import SimpleNamespace
+# Create the arcface_model folder if not already present
+!mkdir -p arcface_model
 
-# --- 8. Setup Options manually ---
-opt = SimpleNamespace(
-    name = 'people',
-    use_mask = False,
-    output_path = './output/',
-    crop_size = 224,
-    isTrain = False,
-    gpu_ids = [0],
-    checkpoints_dir = './checkpoints',
-    batch_size = 1
-)
-
-# --- 9. Load SimSwap Model ---
-from models.models import create_model
-model = create_model(opt)
-model.load_networks('checkpoints/people/epoch_00020.pth')
-model.eval()
-model = model.to(device)
-
-# --- 10. Load ArcFace Model ---
-import sys
-sys.path.append('./arcface_model')
-from models import iresnet
-
-arcface = iresnet.iresnet100(pretrained=False)
-arcface.load_state_dict(torch.load('arcface_model/backbone.pth', map_location='cpu'))
-arcface = arcface.eval().to(device)
+# Download backbone.pth directly to arcface_model
+!wget https://github.com/neuralchen/SimSwap/releases/download/1.0/backbone.pth -P arcface_model/
