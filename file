@@ -5,11 +5,11 @@ Absolutely! Here’s how you can manually download and upload the required model
 🔹 Step 1: Download the Required Model Files
 
 1. ArcFace Model (arcface_checkpoint.tar)
-	•	Download Link:
+	•	Download Link:https://objects.githubusercontent.com/github-production-release-asset-2e65be/374891081/f01468b3-446b-4867-8c78-6d496183f9e6?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20250426%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250426T111133Z&X-Amz-Expires=300&X-Amz-Signature=c861ea735f7b772f110769fb64f819246fa73fc0e7f16f168cd54ae27d7ae03f&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Darcface_checkpoint.tar&response-content-type=application%2Foctet-stream
 arcface_checkpoint.tar
 
 2. SimSwap Checkpoint (epoch_00020.pth)
-	•	Download Link:
+	•	Download Link:https://objects.githubusercontent.com/github-production-release-asset-2e65be/374891081/a8dac400-dcb6-11eb-933f-977cd7f5f554?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20250426%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250426T111303Z&X-Amz-Expires=300&X-Amz-Signature=b0670f904027b3c50393071e29d53dba446a288abd710a39feebe9750518e59f&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dcheckpoints.zip&response-content-type=application%2Foctet-stream
 epoch_00020.pth
 
 Note: The checkpoints.zip file contains the epoch_00020.pth file. After downloading, you’ll need to extract it to access the .pth file.
