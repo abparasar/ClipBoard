@@ -1,13 +1,2 @@
-import pandas as pd
-
-# Initialize DataFrame with columns A to F
-def create_dataframe():
-    columns = ['A', 'B', 'C', 'D', 'E', 'F']
-    return pd.DataFrame(columns=columns)
-
-# Append a row (as list) to the DataFrame
-def add_row(df, row):
-    if len(row) != 6:
-        raise ValueError("Row must have exactly 6 elements for columns A to F.")
-    new_row = pd.DataFrame([row], columns=df.columns)
-    return pd.concat([df, new_row], ignore_index=True)
+!gdown --id 1M3EN16oJ-g57Es0z6UIKce0LwFZzWx9j -O ./arcface_model/arcface_checkpoint.tar
+!gdown --id 1KF8kAe8X9FfSFP9V2LhG0fIMd1u_SyV0 -O ./checkpoints/people/epoch_00020.pth
