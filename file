@@ -1,2 +1,3 @@
-!gdown --id 1M3EN16oJ-g57Es0z6UIKce0LwFZzWx9j -O ./arcface_model/arcface_checkpoint.tar
-!gdown --id 1KF8kAe8X9FfSFP9V2LhG0fIMd1u_SyV0 -O ./checkpoints/people/epoch_00020.pth
+!wget https://huggingface.co/justinpinkney/SimSwap/resolve/main/arcface_model/arcface_checkpoint.tar -P ./arcface_model/
+
+!wget https://huggingface.co/justinpinkney/SimSwap/resolve/main/checkpoints/people/epoch_00020.pth -P ./checkpoints/people/
