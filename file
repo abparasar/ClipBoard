@@ -1,5 +1,2 @@
-# Create the arcface_model folder if not already present
-!mkdir -p arcface_model
-
-# Download backbone.pth directly to arcface_model
-!wget https://github.com/neuralchen/SimSwap/releases/download/1.0/backbone.pth -P arcface_model/
+Go to the Hugging Face model page:
+https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
