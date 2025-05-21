@@ -1,2 +1,1 @@
-Go to the Hugging Face model page:
-https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+While metrics like recall, which measures the ability to correctly identify all relevant instances (TP / (TP + FN)), are traditionally used to evaluate performance, the developers of this model emphasized that recall alone is not the most important metric for the contextual component. Instead, they prioritized precision and accuracy, aiming to ensure that when the model does identify an intent, it is correct and adds value over existing systems like Cortex.
