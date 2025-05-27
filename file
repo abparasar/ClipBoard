@@ -1,1 +1,2 @@
-Word embedding turns tokens into number vectors that capture meaning, so the model can understand and compare words.
+"Simran" → [0.25, -0.13, 0.88, 0.01, ...]
+(a vector of numbers, e.g., 300 dimensions)
