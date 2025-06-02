@@ -1,1 +1,1 @@
-Benchmark the BART-large model by evaluating its performance on standard NLP tasks (e.g., summarization, QA, translation) using datasets like CNN/DailyMail or XSum, and assessing output with metrics such as ROUGE, BLEU, or accuracy
+NLP is sequential because the meaning of a sentence unfolds word by word — each word depends on those before it, making order essential for understanding.
