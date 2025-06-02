@@ -1,1 +1,1 @@
-Evaluate model performance by systematically varying temperature, top-k, and top-p sampling parameters and comparing output quality across metrics such as coherence, diversity, factuality, or task-specific accuracy.
+Benchmark the BART-large model by evaluating its performance on standard NLP tasks (e.g., summarization, QA, translation) using datasets like CNN/DailyMail or XSum, and assessing output with metrics such as ROUGE, BLEU, or accuracy
