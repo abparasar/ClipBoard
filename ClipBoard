@@ -1,1 +1,2 @@
-Self-attention is calculated for every word with respect to all other words, including itself. It helps the model figure out that “he” refers to “Ron” by checking connections between words. This way, the sentence meaning is understood better.
+Self-attention lets each word in a sentence focus on all other words—including itself—to understand context and meaning.
+Residual connection adds the original input back to the output of a layer to help preserve information and improve training.
