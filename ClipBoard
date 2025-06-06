@@ -1,1 +1,1 @@
-In the sentence, self-attention helps the model understand that “he” in “as he raised his wand” refers to Ron, not Harry. It does this by comparing every word to every other word and assigning importance scores, so “he” links strongly to “Ron.” This way, the model captures context and relationships within the sentence efficiently.
+Self-attention is calculated for every word with respect to all other words, including itself. It helps the model figure out that “he” refers to “Ron” by checking connections between words. This way, the sentence meaning is understood better.
