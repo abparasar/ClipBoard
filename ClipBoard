@@ -1,1 +1,3 @@
-Positional encoding uses sine and cosine functions at varying frequencies to generate fixed vectors that uniquely represent each token’s position in the sequence
+“Here’s a sentence where meaning depends entirely on context—who raised the wand, Harry or Ron?
+Thanks to self-attention and positional encoding, the model learns these relationships and resolves the ambiguity.
+This shows how transformers go beyond word meaning—they understand structure too.”
