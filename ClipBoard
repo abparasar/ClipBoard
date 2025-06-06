@@ -1,1 +1,1 @@
-Positional encoding values are fixed sine and cosine functions of token position and embedding dimension.
+Positional encoding uses sine and cosine functions at varying frequencies to generate fixed vectors that uniquely represent each token’s position in the sequence
