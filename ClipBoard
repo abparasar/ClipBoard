@@ -1,1 +1,1 @@
-RNN is like Chatur from 3 Idiots — it tries to remember everything, but often forgets important context over time. LSTM is like Rancho — it understands, remembers what matters, and learns smartly. And Generative AI? That’s Chitti the Robot — superintelligent, creative, and capable of thinking beyond what it’s taught.”
+Positional encoding adds information about token positions to embeddings, enabling transformers to capture word order.
