@@ -1,2 +1,1 @@
-Self-attention lets each word in a sentence focus on all other words—including itself—to understand context and meaning.
-Residual connection adds the original input back to the output of a layer to help preserve information and improve training.
+Encoder-decoder attention helps the decoder focus on relevant parts of the input (from the encoder) while generating each output word.
