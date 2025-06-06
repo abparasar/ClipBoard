@@ -1,1 +1,1 @@
-Positional encoding adds information about token positions to embeddings, enabling transformers to capture word order.
+Positional encoding values are fixed sine and cosine functions of token position and embedding dimension.
