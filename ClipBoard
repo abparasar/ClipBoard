@@ -1,3 +1,1 @@
-“Here’s a sentence where meaning depends entirely on context—who raised the wand, Harry or Ron?
-Thanks to self-attention and positional encoding, the model learns these relationships and resolves the ambiguity.
-This shows how transformers go beyond word meaning—they understand structure too.”
+In the sentence, self-attention helps the model understand that “he” in “as he raised his wand” refers to Ron, not Harry. It does this by comparing every word to every other word and assigning importance scores, so “he” links strongly to “Ron.” This way, the model captures context and relationships within the sentence efficiently.
