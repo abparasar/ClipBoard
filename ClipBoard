@@ -1,1 +1,11 @@
-Encoder-decoder attention helps the decoder focus on relevant parts of the input (from the encoder) while generating each output word.
+So we’ve seen how the full Transformer with encoder and decoder works great for things like translation. But sometimes, you only need one half of it to get the job done.
+
+That’s where the encoder shines all by itself — just like BERT.
+
+BERT stands for Bidirectional Encoder Representations from Transformers, and it’s basically the Transformer’s encoder on steroids. It reads the whole sentence at once — both left to right and right to left — so it really gets what every word means in context.
+
+Because of this, BERT is amazing for understanding language, whether it’s answering questions, figuring out sentiment, or other tasks where understanding is key.
+
+For example, it can easily be turned into a classification model — like deciding if a review is positive or negative — just by adding a simple layer on top.
+
+So, you can think of BERT as your super-smart language buddy who looks at the whole picture before making sense of it.”
