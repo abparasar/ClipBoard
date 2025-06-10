@@ -1,1 +1,10 @@
-Potential benefits and proposed solution different 
+Title: SmartDocGuard: AI-Powered Document Curator
+
+Idea Detail:
+Use LLMs to scan documents for grammar, spelling, tonal imbalance, and contradictions to ensure polished and coherent writing.
+
+Potential Benefits:
+Enhances content quality, reduces human review effort, and prevents miscommunication or reputational risks from unintended tone or inconsistencies.
+
+Proposed Solution:
+Integrate an LLM-based module into writing platforms that highlights issues in real time and suggests context-aware edits with severity levels.
