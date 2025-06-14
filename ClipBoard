@@ -1,10 +1,35 @@
-Title: SmartDocGuard: AI-Powered Document Curator
+from sentence_transformers import SentenceTransformer
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 
-Idea Detail:
-Use LLMs to scan documents for grammar, spelling, tonal imbalance, and contradictions to ensure polished and coherent writing.
+# Load the model from local path (update the path to your downloaded directory)
+model = SentenceTransformer('./all-MiniLM-L6-v2')  # Adjust if path is different
 
-Potential Benefits:
-Enhances content quality, reduces human review effort, and prevents miscommunication or reputational risks from unintended tone or inconsistencies.
+# Load your CSV file
+df = pd.read_csv('your_file.csv')  # Replace with your actual CSV file path
 
-Proposed Solution:
-Integrate an LLM-based module into writing platforms that highlights issues in real time and suggests context-aware edits with severity levels.
+# Define a few banking reference sentences
+banking_references = [
+    "bank account opening",
+    "loan application process",
+    "credit card payment",
+    "financial transaction",
+    "internet banking login issue"
+]
+banking_embeddings = model.encode(banking_references, convert_to_tensor=True)
+
+# Function to compute max similarity of a text to banking references
+def get_banking_relevance(text):
+    embedding = model.encode([str(text)], convert_to_tensor=True)
+    similarity_scores = cosine_similarity(embedding, banking_embeddings)
+    return float(similarity_scores.max())  # take the max similarity as relevance score
+
+# Apply to 'dialogue' and 'one_liner' columns
+df['dialogue_banking_score'] = df['dialogue'].apply(get_banking_relevance)
+df['one_liner_banking_score'] = df['one_liner'].apply(get_banking_relevance)
+
+# View results
+print(df[['dialogue', 'dialogue_banking_score', 'one_liner', 'one_liner_banking_score']].head())
+
+# Optionally save to new CSV
+df.to_csv('with_banking_relevance_scores.csv', index=False)
