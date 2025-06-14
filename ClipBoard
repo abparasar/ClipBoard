@@ -1,14 +1,19 @@
 from sentence_transformers import SentenceTransformer
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
+import torch
 
-# Load the model from local path (update the path to your downloaded directory)
-model = SentenceTransformer('./all-MiniLM-L6-v2')  # Adjust if path is different
+# Check if GPU is available
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"Using device: {device}")
 
-# Load your CSV file
-df = pd.read_csv('your_file.csv')  # Replace with your actual CSV file path
+# Load model to GPU
+model = SentenceTransformer('./all-MiniLM-L6-v2', device=device)
 
-# Define a few banking reference sentences
+# Load CSV
+df = pd.read_csv('your_file.csv')  # Update path accordingly
+
+# Define banking reference sentences
 banking_references = [
     "bank account opening",
     "loan application process",
@@ -16,20 +21,22 @@ banking_references = [
     "financial transaction",
     "internet banking login issue"
 ]
-banking_embeddings = model.encode(banking_references, convert_to_tensor=True)
 
-# Function to compute max similarity of a text to banking references
+# Encode reference sentences and move to GPU
+banking_embeddings = model.encode(banking_references, convert_to_tensor=True, device=device)
+
+# Function to compute max cosine similarity (banking relevance)
 def get_banking_relevance(text):
-    embedding = model.encode([str(text)], convert_to_tensor=True)
-    similarity_scores = cosine_similarity(embedding, banking_embeddings)
-    return float(similarity_scores.max())  # take the max similarity as relevance score
+    embedding = model.encode([str(text)], convert_to_tensor=True, device=device)
+    similarity_scores = cosine_similarity(embedding.cpu().numpy(), banking_embeddings.cpu().numpy())
+    return float(similarity_scores.max())
 
-# Apply to 'dialogue' and 'one_liner' columns
+# Apply function to both columns
 df['dialogue_banking_score'] = df['dialogue'].apply(get_banking_relevance)
 df['one_liner_banking_score'] = df['one_liner'].apply(get_banking_relevance)
 
-# View results
+# Print sample results
 print(df[['dialogue', 'dialogue_banking_score', 'one_liner', 'one_liner_banking_score']].head())
 
-# Optionally save to new CSV
+# Save output
 df.to_csv('with_banking_relevance_scores.csv', index=False)
