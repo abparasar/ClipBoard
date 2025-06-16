@@ -1,1 +1,1 @@
-preprocessing helps by converting rare, misspelled, or contracted forms into more common, model-friendly tokens. This reduces subword fragmentation and improves representation quality.
+Yes, and do you think it would make sense to also mention RM02? It focuses on improving preprocessing methods, which directly help reduce the risk associated with rare subwords and over-fragmentation.
