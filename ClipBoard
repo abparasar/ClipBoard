@@ -1,6 +1,64 @@
-import os
+To manually download rouge.py and bertscore.py (used by Hugging Face’s evaluate library), follow these steps. These are stored in the Hugging Face evaluation module repository.
 
-os.environ["MASTER_ADDR"] = "localhost"
-os.environ["MASTER_PORT"] = "29500"
-os.environ["WORLD_SIZE"] = "1"
-os.environ["RANK"] = "0"
+⸻
+
+✅ Step-by-step Manual Download Instructions
+
+🔹 1. Go to the GitHub repository:
+
+The evaluation modules are hosted here:
+👉 https://github.com/huggingface/evaluate/tree/main/metrics
+
+🔹 2. Locate the metric you want:
+	•	ROUGE:
+https://github.com/huggingface/evaluate/blob/main/metrics/rouge/rouge.py
+	•	BERTScore:
+https://github.com/huggingface/evaluate/blob/main/metrics/bertscore/bertscore.py
+
+🔹 3. Download the files
+
+You can:
+	•	Click “Raw”, then right-click → Save As, or
+	•	Use wget:
+
+wget https://raw.githubusercontent.com/huggingface/evaluate/main/metrics/rouge/rouge.py
+wget https://raw.githubusercontent.com/huggingface/evaluate/main/metrics/bertscore/bertscore.py
+
+🔹 4. Download their __init__.py (optional but recommended)
+
+Some metrics also use an __init__.py in the same folder. If you’re running them manually, you might want to fetch it too from:
+	•	metrics/rouge/__init__.py
+	•	metrics/bertscore/__init__.py
+
+⸻
+
+✅ How to use downloaded metric manually
+
+Put the file in a local folder like ./custom_metrics/rouge/rouge.py, then:
+
+from evaluate import load
+
+rouge = load("./custom_metrics/rouge")
+
+Make sure the folder has:
+
+custom_metrics/
+└── rouge/
+    ├── rouge.py
+    └── __init__.py (optional but safer)
+
+Same process for bertscore.
+
+⸻
+
+🧠 Tip
+
+These metrics might also require extra dependencies:
+
+pip install rouge-score
+pip install bert-score
+
+
+⸻
+
+Let me know if you want these bundled into a ZIP or need help editing the scripts!
