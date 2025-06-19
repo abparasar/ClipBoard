@@ -1,64 +1,57 @@
-To manually download rouge.py and bertscore.py (used by Hugging Face’s evaluate library), follow these steps. These are stored in the Hugging Face evaluation module repository.
+Here’s a fun, sharp, and informative version of your slide on encoder and decoder operating independently — perfect for a GenAI deck with personality:
 
 ⸻
 
-✅ Step-by-step Manual Download Instructions
+🤖 Encoder vs Decoder: Solo Mode Activated! 🎯
 
-🔹 1. Go to the GitHub repository:
+🧠 Encoder = The Thinker
 
-The evaluation modules are hosted here:
-👉 https://github.com/huggingface/evaluate/tree/main/metrics
+“I read. I reflect. I don’t speak unless spoken to.”
 
-🔹 2. Locate the metric you want:
-	•	ROUGE:
-https://github.com/huggingface/evaluate/blob/main/metrics/rouge/rouge.py
-	•	BERTScore:
-https://github.com/huggingface/evaluate/blob/main/metrics/bertscore/bertscore.py
-
-🔹 3. Download the files
-
-You can:
-	•	Click “Raw”, then right-click → Save As, or
-	•	Use wget:
-
-wget https://raw.githubusercontent.com/huggingface/evaluate/main/metrics/rouge/rouge.py
-wget https://raw.githubusercontent.com/huggingface/evaluate/main/metrics/bertscore/bertscore.py
-
-🔹 4. Download their __init__.py (optional but recommended)
-
-Some metrics also use an __init__.py in the same folder. If you’re running them manually, you might want to fetch it too from:
-	•	metrics/rouge/__init__.py
-	•	metrics/bertscore/__init__.py
+	•	✅ Understands full input context at once
+	•	✅ Great for understanding tasks: classification, embeddings, QA
+	•	❌ Doesn’t generate text
+	•	🏋️‍♂️ Heavy lifters: BERT, RoBERTa, MPNet
 
 ⸻
 
-✅ How to use downloaded metric manually
+🗣️ Decoder = The Talker
 
-Put the file in a local folder like ./custom_metrics/rouge/rouge.py, then:
+“I generate. I create. One word at a time.”
 
-from evaluate import load
-
-rouge = load("./custom_metrics/rouge")
-
-Make sure the folder has:
-
-custom_metrics/
-└── rouge/
-    ├── rouge.py
-    └── __init__.py (optional but safer)
-
-Same process for bertscore.
+	•	✅ Generates text step-by-step, using only past info
+	•	✅ Great for creative tasks: writing, chatting, code, summarization
+	•	❌ Doesn’t need input sequence (if standalone)
+	•	🎤 Star performers: GPT, LLaMA, Falcon
 
 ⸻
 
-🧠 Tip
+👫 Together = Magic
 
-These metrics might also require extra dependencies:
+“One reads, one speaks — the ultimate tag team.”
 
-pip install rouge-score
-pip install bert-score
+	•	Used in tasks like machine translation, summarization with input, etc.
+	•	Encoder gives the meaning 💡 → Decoder gives the words 🗯️
+	•	Eg: T5, BART, mBART
+
+⸻
+
+🔓 Solo Missions? Totally Possible!
+
+🧠 Encoder-Only	🗣️ Decoder-Only
+Sentence classification	Autocomplete
+Search embeddings	Story generation
+Topic modeling	Dialogue/chatbots
 
 
 ⸻
 
-Let me know if you want these bundled into a ZIP or need help editing the scripts!
+🎉 TL;DR
+
+Encoders = Read & understand 🤓
+Decoders = Imagine & speak 🧑‍🎤
+Both together = 🤯
+
+⸻
+
+Let me know if you want an illustration like “Encoder with glasses, Decoder with a mic” or a comic strip version!
