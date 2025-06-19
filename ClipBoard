@@ -1,57 +1,62 @@
-Here’s a fun, sharp, and informative version of your slide on encoder and decoder operating independently — perfect for a GenAI deck with personality:
+Sure! Here’s a simple example of a Q&A task that uses an encoder-only model like BERT:
 
 ⸻
 
-🤖 Encoder vs Decoder: Solo Mode Activated! 🎯
+🤖 Encoder-Only Q&A Example
 
-🧠 Encoder = The Thinker
+Context (Input Passage):
+The Eiffel Tower is located in Paris, France. It was built in 1889 and is one of the most recognizable structures in the world.
 
-“I read. I reflect. I don’t speak unless spoken to.”
+Question:
+Where is the Eiffel Tower located?
 
-	•	✅ Understands full input context at once
-	•	✅ Great for understanding tasks: classification, embeddings, QA
-	•	❌ Doesn’t generate text
-	•	🏋️‍♂️ Heavy lifters: BERT, RoBERTa, MPNet
-
-⸻
-
-🗣️ Decoder = The Talker
-
-“I generate. I create. One word at a time.”
-
-	•	✅ Generates text step-by-step, using only past info
-	•	✅ Great for creative tasks: writing, chatting, code, summarization
-	•	❌ Doesn’t need input sequence (if standalone)
-	•	🎤 Star performers: GPT, LLaMA, Falcon
+Answer (Extracted by Encoder Model):
+Paris, France
 
 ⸻
 
-👫 Together = Magic
+🧠 How It Works:
+	•	The encoder processes both the question and passage together.
+	•	It computes contextual embeddings.
+	•	It predicts the start and end positions of the answer span within the passage.
 
-“One reads, one speaks — the ultimate tag team.”
+⚙️ Models like BERT, RoBERTa, or ALBERT are great at this, without needing a decoder!
 
-	•	Used in tasks like machine translation, summarization with input, etc.
-	•	Encoder gives the meaning 💡 → Decoder gives the words 🗯️
-	•	Eg: T5, BART, mBART
+Would you like a visual layout or want the same in a slide-ready format?
 
-⸻
 
-🔓 Solo Missions? Totally Possible!
 
-🧠 Encoder-Only	🗣️ Decoder-Only
-Sentence classification	Autocomplete
-Search embeddings	Story generation
-Topic modeling	Dialogue/chatbots
-
+Great! Here’s the same Q&A example using a decoder-only model like GPT — this time in a generative format:
 
 ⸻
 
-🎉 TL;DR
+🗣️ Decoder-Only Q&A Example (Generative)
 
-Encoders = Read & understand 🤓
-Decoders = Imagine & speak 🧑‍🎤
-Both together = 🤯
+Input Prompt:
+Answer the question based on the passage below.
+Passage: The Eiffel Tower is located in Paris, France. It was built in 1889 and is one of the most recognizable structures in the world.
+Question: Where is the Eiffel Tower located?
+
+Generated Answer (by Decoder Model):
+The Eiffel Tower is located in Paris, France.
 
 ⸻
 
-Let me know if you want an illustration like “Encoder with glasses, Decoder with a mic” or a comic strip version!
+🧠 How It Works:
+	•	The decoder reads the entire prompt (passage + question) as one sequence.
+	•	It generates the answer token-by-token.
+	•	No need to predict start/end spans — it just “writes” the answer.
+
+⚙️ Used in GPT, LLaMA, Falcon, and other generative models.
+
+⸻
+
+🔍 Comparison
+
+Task Type	Encoder (e.g., BERT)	Decoder (e.g., GPT)
+Method	Span prediction (start & end)	Text generation (token-by-token)
+Output Style	Extractive	Generative
+Input Format	[CLS] Question + Passage	Prompt: Passage + Question
+
+Let me know if you want a side-by-side visual slide or analogy (like “BERT finds it, GPT says it”).
+
