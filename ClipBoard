@@ -1,2 +1,36 @@
-•	Encoder (e.g., BERT): Trained to select tokens (e.g., start and end) within the context → typically results in short, span-based answers.
-	•	Decoder (e.g., GPT): Trained to generate the next token conditioned on prior tokens → naturally produces longer, fluent sentences.
+Absolutely! Let’s combine the person analogy with the actual role of words in self-attention — perfect for a slide that makes both intuitive and technical sense.
+
+⸻
+
+🧠 Words as People in Self-Attention: Q, K, V Explained
+
+Imagine each word is a person at a party trying to understand the conversation. Here’s what each word does:
+
+Role	Person Analogy	Word Function
+Query (Q)	“What am I looking for in others?”	The word trying to find relevant context from others.
+Key (K)	“What do I have to offer to others?”	The signal that represents what this word is about.
+Value (V)	“Here’s the information I’ll give if someone picks me.”	The actual content this word contributes to the output.
+
+
+⸻
+
+💬 Example:
+
+Let’s say the sentence is:
+
+“The cat sat on the mat.”
+
+Now take the word “sat” — it wants to know what to pay attention to in the sentence:
+	•	It creates a Query vector to ask: “Which words help me understand my context?”
+	•	It compares this Q to Key vectors of all words: “Does ‘cat’ offer useful info? What about ‘mat’?”
+	•	Based on how well the Q matches each K, it picks the Value vectors to blend and understand its meaning better.
+
+⸻
+
+🎯 Why this matters?
+
+This mechanism allows the word “sat” to focus more on “cat” (who sat?) and “mat” (where?) — building deep, contextual understanding.
+
+⸻
+
+Let me know if you want this turned into a visual with little word-bubbles or a cartoon slide — it would look great in a GenAI deck!
