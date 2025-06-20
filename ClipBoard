@@ -1,15 +1,17 @@
 \documentclass{article}
-\usepackage{datatool}
-
-\DTLloaddb{mydata}{data.csv} % Load CSV into memory
+\usepackage{csvsimple}
+\usepackage{ifthen}
 
 \begin{document}
 
-\section*{Filtered Column 2 Values (Where Column 1 = Yes)}
+\section*{Fruits where col1 = Yes}
 
 \begin{itemize}
-\DTLforeach{mydata}{\colone=col1,\coltwo=col2}{%
-  \ifthenelse{\equal{\colone}{Yes}}{%
+\csvreader[
+    separator=comma,
+    head to column names
+]{data.csv}{}{% Access rows with \col1, \col2
+  \ifthenelse{\equal{\colone}{Yes}}{
     \item \coltwo
   }{}
 }
