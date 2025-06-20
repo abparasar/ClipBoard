@@ -1,1 +1,19 @@
-These scores become attention weights, which decide how much of each person’s value (V) to listen to.
+\documentclass{article}
+\usepackage{luacode}  % Allows Lua code inside LaTeX
+
+\begin{document}
+
+\section*{Filtered Column 2 Values (Where Column 1 = Yes)}
+
+\begin{itemize}
+\begin{luacode}
+for line in io.lines("data.csv") do
+  local col1, col2 = line:match("([^,]+),([^,]+)")
+  if col1 == "Yes" then
+    tex.print("\\item " .. col2)
+  end
+end
+\end{luacode}
+\end{itemize}
+
+\end{document}
