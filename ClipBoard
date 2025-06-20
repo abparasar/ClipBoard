@@ -1,6 +1,20 @@
-col1,col2
-Yes,Apple
-No,Banana
-Yes,Cherry
-No,Date
-Yes,Elderberry
+\documentclass{article}
+\usepackage{csvsimple}
+\usepackage{ifthen}
+
+\begin{document}
+
+\section*{Fruits where col1 = Yes}
+
+\begin{itemize}
+\csvreader[
+    separator=comma,
+    head to column names
+]{data.csv}{col1=\flag, col2=\fruit}{%
+  \ifthenelse{\equal{\flag}{Yes}}{%
+    \item \fruit
+  }{}
+}
+\end{itemize}
+
+\end{document}
