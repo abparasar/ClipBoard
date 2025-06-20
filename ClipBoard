@@ -1,19 +1,18 @@
 \documentclass{article}
-\usepackage{luacode}  % Allows Lua code inside LaTeX
+\usepackage{datatool}
+
+\DTLloaddb{mydata}{data.csv} % Load CSV into memory
 
 \begin{document}
 
 \section*{Filtered Column 2 Values (Where Column 1 = Yes)}
 
 \begin{itemize}
-\begin{luacode}
-for line in io.lines("data.csv") do
-  local col1, col2 = line:match("([^,]+),([^,]+)")
-  if col1 == "Yes" then
-    tex.print("\\item " .. col2)
-  end
-end
-\end{luacode}
+\DTLforeach{mydata}{\colone=col1,\coltwo=col2}{%
+  \ifthenelse{\equal{\colone}{Yes}}{%
+    \item \coltwo
+  }{}
+}
 \end{itemize}
 
 \end{document}
