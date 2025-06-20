@@ -1,20 +1,6 @@
-\documentclass{article}
-\usepackage{csvsimple}
-\usepackage{ifthen}
-
-\begin{document}
-
-\section*{Fruits where col1 = Yes}
-
-\begin{itemize}
-\csvreader[
-    separator=comma,
-    head to column names
-]{data.csv}{}{% Access rows with \col1, \col2
-  \ifthenelse{\equal{\colone}{Yes}}{
-    \item \coltwo
-  }{}
-}
-\end{itemize}
-
-\end{document}
+col1,col2
+Yes,Apple
+No,Banana
+Yes,Cherry
+No,Date
+Yes,Elderberry
