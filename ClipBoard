@@ -1,46 +1,15 @@
-import pandas as pd
-from openpyxl import Workbook
 
-# Load Excel files with headers
-time_a = pd.read_excel("time_A.xlsx", usecols=["Name"])
-time_b = pd.read_excel("time_B.xlsx", usecols=["Name"])
+# Set fixed column widths for neat alignment
+name_width = max(output["Name"].str.len().max(), 10)
+status_width = max(output["Status"].str.len().max(), 8)
 
-# Add rank positions (1 = top rank)
-time_a["Rank_A"] = range(1, len(time_a) + 1)
-time_b["Rank_B"] = range(1, len(time_b) + 1)
+# Header
+print(f"{'Name'.ljust(name_width)}  {'Rank_B':>7}  {'Status'.ljust(status_width)}")
+print("-" * (name_width + 2 + 7 + 2 + status_width))
 
-# Take top 25 from time_B
-top25_b = time_b.head(25)
-
-# Merge top 25 with time_A to check old rank
-merged = pd.merge(top25_b, time_a, on="Name", how="left")
-
-# Define status arrow
-def get_status(row):
-    if pd.isna(row['Rank_A']):
-        return "🆕 New"
-    diff = row['Rank_A'] - row['Rank_B']
-    if diff > 0:
-        return f"⬆️ {diff}"
-    elif diff < 0:
-        return f"⬇️ {abs(diff)}"
-    else:
-        return "↔️ Same"
-
-# Add status column
-merged["Status"] = merged.apply(get_status, axis=1)
-
-# Output columns: Name, Rank_B, Status
-output = merged[["Name", "Rank_B", "Status"]]
-
-# Write to Excel
-wb = Workbook()
-ws = wb.active
-ws.title = "Top 25 Movement"
-ws.append(["Name", "Rank_B", "Status"])
-
+# Rows
 for _, row in output.iterrows():
-    ws.append([row["Name"], row["Rank_B"], row["Status"]])
-
-# Save file
-wb.save("Top25_Movement.xlsx")
+    name = row["Name"].ljust(name_width)
+    rank = str(row["Rank_B"]).rjust(7)
+    status = row["Status"].ljust(status_width)
+    print(f"{name}  {rank}  {status}")
