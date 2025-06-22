@@ -1,20 +1,52 @@
-\documentclass{article}
-\usepackage{csvsimple}
-\usepackage{ifthen}
+import pandas as pd
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from openpyxl.styles.colors import Color, RED, GREEN, BLACK
 
-\begin{document}
+# Load Excel files
+time_a = pd.read_excel("time_A.xlsx")
+time_b = pd.read_excel("time_B.xlsx")
 
-\section*{Fruits where col1 = Yes}
+# Rename columns for clarity
+time_a.columns = ['Name', 'Rank_A']
+time_b.columns = ['Name', 'Rank_B']
 
-\begin{itemize}
-\csvreader[
-    separator=comma,
-    head to column names
-]{data.csv}{col1=\flag, col2=\fruit}{%
-  \ifthenelse{\equal{\flag}{Yes}}{%
-    \item \fruit
-  }{}
-}
-\end{itemize}
+# Merge B with A to find movement
+merged = pd.merge(time_b, time_a, on='Name', how='left')
 
-\end{document}
+# Function to assign movement status
+def get_status(row):
+    if pd.isna(row['Rank_A']):
+        return "🆕 New", BLACK
+    diff = row['Rank_A'] - row['Rank_B']
+    if diff > 0:
+        return f"🡅 {diff}", GREEN  # moved up
+    elif diff < 0:
+        return f"🡇 {abs(diff)}", RED  # moved down
+    else:
+        return "⇄ Same", BLACK  # no movement
+
+# Apply status logic
+statuses = merged.apply(get_status, axis=1)
+merged['Status'] = [s[0] for s in statuses]
+merged['Color'] = [s[1] for s in statuses]
+
+# Take Top 25 from Time B
+top25 = merged.sort_values('Rank_B').head(25)
+
+# Write to Excel using openpyxl
+wb = Workbook()
+ws = wb.active
+ws.title = "Top 25 Movement"
+
+# Write headers
+ws.append(['Name', 'Rank_B', 'Status'])
+
+# Write each row with color
+for _, row in top25.iterrows():
+    ws.append([row['Name'], row['Rank_B'], row['Status']])
+    status_cell = ws.cell(row=ws.max_row, column=3)
+    status_cell.font = Font(color=row['Color'])
+
+# Save workbook
+wb.save("Top25_Movement.xlsx")
