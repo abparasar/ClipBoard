@@ -1,52 +1,46 @@
 import pandas as pd
 from openpyxl import Workbook
-from openpyxl.styles import Font
-from openpyxl.styles.colors import Color, RED, GREEN, BLACK
 
 # Load Excel files
 time_a = pd.read_excel("time_A.xlsx")
 time_b = pd.read_excel("time_B.xlsx")
 
-# Rename columns for clarity
+# Rename for clarity
 time_a.columns = ['Name', 'Rank_A']
 time_b.columns = ['Name', 'Rank_B']
 
-# Merge B with A to find movement
+# Merge based on Name
 merged = pd.merge(time_b, time_a, on='Name', how='left')
 
-# Function to assign movement status
+# Define status with arrow symbols
 def get_status(row):
     if pd.isna(row['Rank_A']):
-        return "🆕 New", BLACK
+        return "🆕 New"
     diff = row['Rank_A'] - row['Rank_B']
     if diff > 0:
-        return f"🡅 {diff}", GREEN  # moved up
+        return f"⬆️ {diff}"
     elif diff < 0:
-        return f"🡇 {abs(diff)}", RED  # moved down
+        return f"⬇️ {abs(diff)}"
     else:
-        return "⇄ Same", BLACK  # no movement
+        return "↔️ Same"
 
-# Apply status logic
-statuses = merged.apply(get_status, axis=1)
-merged['Status'] = [s[0] for s in statuses]
-merged['Color'] = [s[1] for s in statuses]
+# Apply status
+merged['Status'] = merged.apply(get_status, axis=1)
 
-# Take Top 25 from Time B
+# Select top 25 by Rank_B
 top25 = merged.sort_values('Rank_B').head(25)
 
-# Write to Excel using openpyxl
+# Create Excel output
 wb = Workbook()
 ws = wb.active
 ws.title = "Top 25 Movement"
 
-# Write headers
+# Header row
 ws.append(['Name', 'Rank_B', 'Status'])
 
-# Write each row with color
+# Fill rows
 for _, row in top25.iterrows():
     ws.append([row['Name'], row['Rank_B'], row['Status']])
-    status_cell = ws.cell(row=ws.max_row, column=3)
-    status_cell.font = Font(color=row['Color'])
 
 # Save workbook
 wb.save("Top25_Movement.xlsx")
