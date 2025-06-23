@@ -1,15 +1,37 @@
+Here’s a clean and concise slide content summarizing Masked Language Modeling (MLM) and Next Sentence Prediction (NSP) — the two pretraining objectives of BERT:
 
-# Set fixed column widths for neat alignment
-name_width = max(output["Name"].str.len().max(), 10)
-status_width = max(output["Status"].str.len().max(), 8)
+⸻
 
-# Header
-print(f"{'Name'.ljust(name_width)}  {'Rank_B':>7}  {'Status'.ljust(status_width)}")
-print("-" * (name_width + 2 + 7 + 2 + status_width))
+🧠 BERT Pretraining Tasks
 
-# Rows
-for _, row in output.iterrows():
-    name = row["Name"].ljust(name_width)
-    rank = str(row["Rank_B"]).rjust(7)
-    status = row["Status"].ljust(status_width)
-    print(f"{name}  {rank}  {status}")
+1. Masked Language Modeling (MLM)
+
+Goal: Predict randomly masked words in a sentence
+
+	•	15% of input tokens are masked
+	•	Model learns contextual understanding of words
+	•	Example:
+	•	Input: The cat sat on the [MASK].
+	•	Output: mat
+
+⸻
+
+2. Next Sentence Prediction (NSP)
+
+Goal: Predict whether one sentence follows another
+
+	•	50%: Second sentence is the true next
+	•	50%: Random sentence from corpus
+	•	Helps model understand sentence relationships
+	•	Example:
+	•	Sentence A: The man went to the store.
+	•	Sentence B: He bought some milk. → IsNext
+	•	Sentence B: The sky is blue. → NotNext
+
+⸻
+
+📌 Purpose: Together, MLM + NSP enable BERT to learn both deep word context and inter-sentence coherence — key for downstream tasks like QA, NLI, etc.
+
+⸻
+
+Let me know if you want a visual diagram or LaTeX version for the slide.
