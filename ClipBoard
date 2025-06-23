@@ -1,1 +1,3 @@
-Yes, chatbot utterances are generally short, single-turn sentences or phrases, so NSP (which models sentence pairs) is not needed.
+Here’s a one-line summary for each:
+	•	DialogSum: A dataset of dialogue transcripts with corresponding abstractive summaries focused on capturing conversational content.
+	•	XSum (Extreme Summarization): A news article summarization dataset where each summary is a single, highly abstractive sentence capturing the article’s key point.
