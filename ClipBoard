@@ -1,3 +1,1 @@
-Here’s a one-line summary for each:
-	•	DialogSum: A dataset of dialogue transcripts with corresponding abstractive summaries focused on capturing conversational content.
-	•	XSum (Extreme Summarization): A news article summarization dataset where each summary is a single, highly abstractive sentence capturing the article’s key point.
+BART-large is an encoder-decoder transformer model pretrained with denoising objectives, specifically designed to excel at abstractive summarization and other text generation tasks.
