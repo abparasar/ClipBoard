@@ -1,1 +1,1 @@
-BART-large XSum→DialogSum: An encoder-decoder BART-large model first fine-tuned on the XSum dataset for abstractive news summarization, then further fine-tuned on DialogSum to adapt its summarization capabilities to multi-turn dialogues.
+MPT-7B (few-shot post-processor): A decoder-only language model that refines or enhances summaries from BART-large XSum→DialogSum using few-shot prompting to improve coherence, tone, or style.
