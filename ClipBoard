@@ -1,1 +1,87 @@
-MPT-7B (few-shot post-processor): A decoder-only language model that refines or enhances summaries from BART-large XSum→DialogSum using few-shot prompting to improve coherence, tone, or style.
+Perfect! Here’s how you can compute intent distribution similarity in Python using three key metrics:
+
+⸻
+
+✅ Step 1: Load Your Data
+
+Assume you have two CSV files: file_a.csv and file_b.csv with columns: "intent" and "count"
+
+import pandas as pd
+
+# Load both files
+file_a = pd.read_csv("file_a.csv")
+file_b = pd.read_csv("file_b.csv")
+
+
+⸻
+
+✅ Step 2: Merge on Intent
+
+# Merge on intent (inner to keep common intents only)
+merged = pd.merge(file_a, file_b, on="intent", how="inner", suffixes=('_a', '_b'))
+
+# Check how many intents are common
+print(f"Common intents: {len(merged)}")
+
+
+⸻
+
+✅ Step 3: Normalize Counts
+
+# Normalize the counts to get distributions
+merged['norm_a'] = merged['count_a'] / merged['count_a'].sum()
+merged['norm_b'] = merged['count_b'] / merged['count_b'].sum()
+
+
+⸻
+
+✅ Step 4: Compute Metrics
+
+4.1 Cosine Similarity
+
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+cos_sim = cosine_similarity([merged['count_a']], [merged['count_b']])[0][0]
+print(f"Cosine Similarity: {cos_sim:.4f}")
+
+4.2 Jensen-Shannon Divergence
+
+from scipy.spatial.distance import jensenshannon
+
+js_div = jensenshannon(merged['norm_a'], merged['norm_b'])
+print(f"Jensen-Shannon Divergence: {js_div:.4f}")
+
+4.3 Pearson Correlation
+
+from scipy.stats import pearsonr
+
+corr, _ = pearsonr(merged['count_a'], merged['count_b'])
+print(f"Pearson Correlation: {corr:.4f}")
+
+
+⸻
+
+✅ Optional: Chi-Square Test
+
+from scipy.stats import chi2_contingency
+
+table = [merged['count_a'], merged['count_b']]
+chi2, p, _, _ = chi2_contingency(table)
+print(f"Chi-Square p-value: {p:.4f}")
+
+
+⸻
+
+✅ Interpretation
+
+Metric	Meaning
+Cosine similarity close to 1.0 → Distributions are similar	
+JS divergence close to 0.0 → Distributions are similar	
+Pearson correlation close to 1.0 → Counts vary linearly	
+Chi-square p-value > 0.05 → No significant difference	
+
+
+⸻
+
+Let me know if you want help plotting this or if you’re comparing unsorted files or different structures.
