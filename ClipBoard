@@ -1,90 +1,33 @@
-Thanks — now your goal is very clear:
-
-✅ You want to check how the intent distribution has changed from a set of 661 intents (earlier version) to 708 intents (newer version), including how new/uncommon intents affect the overall distribution.
-
-⸻
-
-🔍 Goal: Detect distribution drift from old → new
-
-You’re not just comparing common intents, but evaluating overall shift, including:
-	•	Addition of 47 new intents (708 - 661 = 47)
-	•	Whether counts are redistributed or concentrated
-	•	How much the overall shape of the distribution has changed
-
-⸻
-
-✅ Recommended Steps (with reasons)
-
-1. Outer Join with Zero Fill
-
-Captures all intents, even those missing in one file.
-
-merged = pd.merge(file_a, file_b, on="intent", how="outer", suffixes=('_a', '_b')).fillna(0)
-
-2. Normalize counts → Distribution
-
-So the comparison is not affected by dataset size.
-
-merged['norm_a'] = merged['count_a'] / merged['count_a'].sum()
-merged['norm_b'] = merged['count_b'] / merged['count_b'].sum()
-
-3. Compute Distribution Shift Metrics
-
-These directly capture distribution drift:
-
-a. Jensen-Shannon Divergence (most intuitive for drift)
-
-from scipy.spatial.distance import jensenshannon
-js_div = jensenshannon(merged['norm_a'], merged['norm_b'])
-print(f"Jensen-Shannon Divergence: {js_div:.4f}")
-
-	•	Ranges from 0 (identical) to 1 (completely different)
-	•	A good choice for comparing probability distributions
-
-b. Cosine Similarity
-
-from sklearn.metrics.pairwise import cosine_similarity
-cos_sim = cosine_similarity([merged['norm_a']], [merged['norm_b']])[0][0]
-print(f"Cosine Similarity: {cos_sim:.4f}")
-
-c. Total Variation Distance (Optional)
-
-Another way to quantify change:
-
-tv_distance = 0.5 * sum(abs(merged['norm_a'] - merged['norm_b']))
-print(f"Total Variation Distance: {tv_distance:.4f}")
-
-
-⸻
-
-✅ Optional: Visualize the Shift
-
+import pandas as pd
 import matplotlib.pyplot as plt
 
-top_intents = merged.sort_values('norm_b', ascending=False).head(20)
-plt.figure(figsize=(12, 6))
-plt.bar(top_intents['intent'], top_intents['norm_a'], label='Old', alpha=0.6)
-plt.bar(top_intents['intent'], top_intents['norm_b'], label='New', alpha=0.6)
-plt.xticks(rotation=90)
+# Assuming you've already created this merged DataFrame
+# merged: columns ['intent', 'count_a', 'count_b', 'norm_a', 'norm_b']
+
+# Compute absolute difference for sorting
+merged['abs_diff'] = abs(merged['norm_a'] - merged['norm_b'])
+
+# Get top 20 intents with biggest shift
+top_shift = merged.sort_values('abs_diff', ascending=False).head(20)
+
+# Plot
+plt.figure(figsize=(14, 6))
+x = range(len(top_shift))
+
+bar_width = 0.4
+
+# Old distribution
+plt.bar([i - bar_width/2 for i in x], top_shift['norm_a'], 
+        width=bar_width, label='Old (661)', color='steelblue')
+
+# New distribution
+plt.bar([i + bar_width/2 for i in x], top_shift['norm_b'], 
+        width=bar_width, label='New (708)', color='orange')
+
+# Labels and formatting
+plt.xticks(x, top_shift['intent'], rotation=90)
 plt.ylabel("Normalized Frequency")
-plt.title("Top 20 Intents: Old vs New Distribution")
+plt.title("Top 20 Intents with Largest Distribution Shift")
 plt.legend()
 plt.tight_layout()
 plt.show()
-
-
-⸻
-
-✅ Summary:
-
-Metric	Interpretation
-JS Divergence ≈ 0	Minimal distribution shift
-JS Divergence ≥ 0.1	Noticeable change
-Cosine ≈ 1.0	Distributions are directionally similar
-TV Distance > 0.1	Some weight redistribution
-Chi-square p < 0.05	Statistically significant change
-
-
-⸻
-
-If you want, you can share sample data or results, and I’ll help interpret whether the change from 661 → 708 is acceptable, expected, or drastic.
