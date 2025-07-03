@@ -11,3 +11,40 @@ cropped_clip = clip.crop(x1=0, y1=0, x2=width, y2=height/2)
 
 # Save the cropped video
 cropped_clip.write_videofile("cropped_top_half.mp4")
+
+import cv2
+
+# Open input video
+cap = cv2.VideoCapture('input.mp4')
+
+# Check if opened successfully
+if not cap.isOpened():
+    print("Error: Could not open video.")
+    exit()
+
+# Get original video properties
+fps = cap.get(cv2.CAP_PROP_FPS)
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+# Define codec and output video writer
+# 'mp4v' works well for .mp4 output
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out = cv2.VideoWriter('output_top_half.mp4', fourcc, fps, (width, height // 2))
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Keep only top half
+    cropped = frame[0:height // 2, :, :]  # Rows, cols, channels
+
+    # Write to output
+    out.write(cropped)
+
+# Release everything
+cap.release()
+out.release()
+
+print("Done! Saved as output_top_half.mp4")
