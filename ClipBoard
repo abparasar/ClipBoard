@@ -48,3 +48,5 @@ cap.release()
 out.release()
 
 print("Done! Saved as output_top_half.mp4")
+
+pip install opencv-python
