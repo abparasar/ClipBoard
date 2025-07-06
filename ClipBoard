@@ -1,10 +1,8 @@
-# train.py
-
 import os
 import torch
 import pandas as pd
 from sklearn.model_selection import train_test_split, ParameterSampler
-from datasets import Dataset, load_from_disk
+from datasets import Dataset
 from transformers import (
     PegasusTokenizer,
     PegasusForConditionalGeneration,
@@ -15,40 +13,47 @@ from transformers import (
 import evaluate
 import numpy as np
 
-# ✅ DDP env
-local_rank = int(os.environ.get("LOCAL_RANK", 0))
-world_size = int(os.environ.get("WORLD_SIZE", 1))
-device = torch.device("cuda", local_rank) if torch.cuda.is_available() else torch.device("cpu")
+# ✅ Device
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(f"Using device: {device}")
 
-print(f"Rank {local_rank}/{world_size} on {device}")
-
-# ✅ Load prepared dataset OR recreate here
+# ✅ Load data
 df = pd.read_csv("/projectspace/zkfq4hl/data/titlesum.csv").head(1000)
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
 train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=42)
 
+print(f"Train: {len(train_df)}, Val: {len(val_df)}, Test: {len(test_df)}")
+
+# ✅ Tokenizer + Model
 tokenizer = PegasusTokenizer.from_pretrained("google/pegasus-large")
 model = PegasusForConditionalGeneration.from_pretrained("google/pegasus-large").to(device)
 
-# ✅ Preprocess
+# ✅ Preprocessing
 def preprocess(examples):
     inputs = examples["dialogue"]
     model_inputs = tokenizer(
-        inputs, max_length=1024, truncation=True, padding="max_length"
+        inputs,
+        max_length=1024,
+        truncation=True,
+        padding="max_length"
     )
     with tokenizer.as_target_tokenizer():
         labels = tokenizer(
             examples["one_liner"],
-            max_length=1024, truncation=True, padding="max_length"
+            max_length=1024,
+            truncation=True,
+            padding="max_length"
         )
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
 
 train_ds = Dataset.from_pandas(train_df).map(preprocess, batched=True)
-val_ds = Dataset.from_pandas(val_df).map(preprocess, batched=True)
+val_ds   = Dataset.from_pandas(val_df).map(preprocess, batched=True)
 
-# ✅ Collator & metric
+# ✅ Data collator
 data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model)
+
+# ✅ Metric
 rouge = evaluate.load("rouge")
 
 def compute_metrics(eval_pred):
@@ -61,7 +66,7 @@ def compute_metrics(eval_pred):
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
     return {k: round(v, 4) for k, v in rouge.compute(predictions=decoded_preds, references=decoded_labels).items()}
 
-# ✅ Random search
+# ✅ Random search params
 param_dist = {
     "learning_rate": [1e-5, 3e-5, 5e-5],
     "per_device_train_batch_size": [2, 4],
@@ -70,8 +75,11 @@ param_dist = {
     "warmup_steps": [0, 500],
 }
 
-param_sampler = ParameterSampler(param_dist, n_iter=5, random_state=42)
+n_iter = 5
+random_state = 42
+param_sampler = ParameterSampler(param_dist, n_iter=n_iter, random_state=random_state)
 
+# ✅ Random search loop (single GPU)
 best_metric = -1
 best_params = None
 
@@ -111,21 +119,16 @@ for i, params in enumerate(param_sampler):
         compute_metrics=compute_metrics,
     )
 
-    if local_rank == 0:
-        print(f"\n🚀 Starting run {i+1}/{5}: {run_name}\n{'-'*60}")
-
+    print(f"\n🚀 Starting run {i+1}/{n_iter}: {run_name}\n{'-'*60}")
     trainer.train()
     metrics = trainer.evaluate()
     rougeL = metrics.get("eval_rougeL", 0)
-
-    if local_rank == 0:
-        print(f"Run {run_name} → ROUGE-L: {rougeL:.4f}")
+    print(f"Run {run_name} → ROUGE-L: {rougeL:.4f}")
 
     if rougeL > best_metric:
         best_metric = rougeL
         best_params = params
 
-if local_rank == 0:
-    print("\n✅ Finished all runs.")
-    print(f"Best ROUGE-L: {best_metric:.4f}")
-    print(f"Best Params: {best_params}")
+print("\n✅ Random search finished.")
+print(f"Best ROUGE-L: {best_metric:.4f}")
+print(f"Best Params: {best_params}")
