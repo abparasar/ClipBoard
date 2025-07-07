@@ -1,71 +1,158 @@
-for i, params in enumerate(param_sampler):
-    run_name = f"run_{i+1}_lr{params['learning_rate']}_bs{params['per_device_train_batch_size']}_ep{params['num_train_epochs']}_wd{params['weight_decay']}_wu{params['warmup_steps']}"
-    output_dir = f"./pegasus_random_runs/{run_name}"
+Great — you’re basically designing a hyperparameter tuning loop for facebook/bart-large, with random search and evolutionary strategy principles. Let’s break this down with an example PyTorch + Transformers approach. I’ll write you a template you can adapt — using 🤗 Transformers, Trainer, and optuna (or your own loop).
 
-    training_args = Seq2SeqTrainingArguments(
+⸻
+
+✅ Key Hyperparameters
+	•	learning_rate: float (e.g., 1e-5 to 5e-5)
+	•	weight_decay: float (e.g., 0.0 to 0.3)
+	•	batch_size: int (per device train batch size)
+	•	num_train_epochs: int (1–10)
+	•	lr_scheduler_type: str (linear, cosine, polynomial, etc.)
+	•	max_source_length: 1024 (fixed)
+	•	max_target_length: 256 (fixed)
+	•	min_source_length: 20 (optional constraint when filtering data)
+	•	fp16: True
+	•	seed: 42
+
+⸻
+
+📌 1️⃣ Prepare Search Space
+
+import random
+
+# Random search example
+def sample_hyperparameters():
+    return {
+        "learning_rate": random.uniform(1e-5, 5e-5),
+        "weight_decay": random.uniform(0.0, 0.3),
+        "per_device_train_batch_size": random.choice([2, 4, 8]),
+        "num_train_epochs": random.choice([2, 3, 4, 5]),
+        "lr_scheduler_type": random.choice(["linear", "cosine", "polynomial"]),
+    }
+
+
+⸻
+
+📌 2️⃣ Training Arguments Template
+
+from transformers import Seq2SeqTrainingArguments
+
+def get_training_arguments(params, output_dir):
+    return Seq2SeqTrainingArguments(
         output_dir=output_dir,
         evaluation_strategy="epoch",
-        save_strategy="epoch",
         learning_rate=params["learning_rate"],
+        weight_decay=params["weight_decay"],
         per_device_train_batch_size=params["per_device_train_batch_size"],
         per_device_eval_batch_size=params["per_device_train_batch_size"],
         num_train_epochs=params["num_train_epochs"],
-        weight_decay=params["weight_decay"],
-        warmup_steps=params["warmup_steps"],
         predict_with_generate=True,
-        generation_max_length=1024,
         fp16=True,
+        lr_scheduler_type=params["lr_scheduler_type"],
+        seed=42,
         save_total_limit=1,
-        logging_dir=f"{output_dir}/logs",
-        logging_steps=50,
-        logging_strategy="steps",
-        disable_tqdm=False,   # <-- force tqdm for all ranks
-        report_to="none",
-        load_best_model_at_end=True,
-        metric_for_best_model="eval_rougeL",
-        greater_is_better=True
     )
+
+
+⸻
+
+📌 3️⃣ Define the Trainer
+
+from transformers import BartForConditionalGeneration, BartTokenizerFast, Seq2SeqTrainer
+from datasets import load_dataset
+
+model = BartForConditionalGeneration.from_pretrained("facebook/bart-large")
+tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-large")
+
+dataset = load_dataset("cnn_dailymail", "3.0.0")
+
+def preprocess_function(examples):
+    inputs = examples["article"]
+    model_inputs = tokenizer(
+        inputs, max_length=1024, truncation=True
+    )
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(
+            examples["highlights"], max_length=256, truncation=True
+        )
+    model_inputs["labels"] = labels["input_ids"]
+    return model_inputs
+
+tokenized = dataset.map(preprocess_function, batched=True)
+
+
+⸻
+
+📌 4️⃣ Run a Random Search Loop
+
+from transformers import DataCollatorForSeq2Seq
+from torch.utils.data import random_split
+
+data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
+
+train_data = tokenized["train"].shuffle(seed=42).select(range(5000)) # small subset for testing
+eval_data = tokenized["validation"].shuffle(seed=42).select(range(500))
+
+best_metric = None
+best_params = None
+
+N_TRIALS = 5
+
+for i in range(N_TRIALS):
+    params = sample_hyperparameters()
+    args = get_training_arguments(params, output_dir=f"./results/trial_{i}")
 
     trainer = Seq2SeqTrainer(
         model=model,
-        args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=val_ds,
+        args=args,
+        train_dataset=train_data,
+        eval_dataset=eval_data,
         tokenizer=tokenizer,
         data_collator=data_collator,
-        compute_metrics=compute_metrics,
     )
 
-    # 👇 This print runs on every rank
-    print(f"\n🚀 [RANK {local_rank}] Starting run {i+1}/{n_iter}")
-    print(f"[RANK {local_rank}] Params: {params}")
-    print(f"[RANK {local_rank}] Output dir: {output_dir}\n{'-'*60}")
-
     trainer.train()
+    eval_metrics = trainer.evaluate()
+    print(f"Trial {i} | Params: {params} | Eval ROUGE: {eval_metrics['eval_rougeL']:.4f}")
 
-    metrics = trainer.evaluate()
-    rougeL = metrics.get("eval_rougeL", 0)
-
-    # 👇 Each rank shows its eval too
-    print(f"[RANK {local_rank}] Run {run_name} → Eval Loss: {metrics['eval_loss']:.4f} | ROUGE-L: {rougeL:.4f}")
-
-    if rougeL > best_metric:
-        best_metric = rougeL
+    if best_metric is None or eval_metrics["eval_rougeL"] > best_metric:
+        best_metric = eval_metrics["eval_rougeL"]
         best_params = params
 
-# ✅ After all runs
-print(f"\n✅ [RANK {local_rank}] Finished all runs.")
-print(f"[RANK {local_rank}] Best ROUGE-L: {best_metric:.4f}")
-print(f"[RANK {local_rank}] Best Params: {best_params}")
+print(f"Best Params: {best_params} | Best ROUGE: {best_metric:.4f}")
 
-# ✅ Only rank 0 saves final best model
-if local_rank == 0:
-    final_output_dir = "./pegasus_random_runs/best_model_final"
-    best_run_name = f"best_run_lr{best_params['learning_rate']}_bs{best_params['per_device_train_batch_size']}_ep{best_params['num_train_epochs']}_wd{best_params['weight_decay']}_wu{best_params['warmup_steps']}"
-    best_output_dir = f"./pegasus_random_runs/{best_run_name}"
 
-    print(f"\n✅ [RANK {local_rank}] Saving best model from: {best_output_dir}")
-    best_model = PegasusForConditionalGeneration.from_pretrained(best_output_dir)
-    best_model.save_pretrained(final_output_dir)
-    tokenizer.save_pretrained(final_output_dir)
-    print(f"\n🚀 [RANK {local_rank}] Best model saved to: {final_output_dir}")
+⸻
+
+📌 5️⃣ Add Evolution Strategy (Optional)
+
+If you want to evolve:
+	•	Keep the best N runs.
+	•	Mutate the best hyperparameters slightly (small random tweaks).
+	•	Run again for M generations.
+
+⸻
+
+📌 Key Points
+
+✅ Seed 42: Controls reproducibility.
+✅ fp16=True speeds up training on supported GPUs.
+✅ max_source_length, max_target_length are set in the tokenizer.
+✅ Use save_total_limit to save disk space.
+✅ Use small dataset slices to test quickly.
+
+⸻
+
+⚡ Optional: Use Optuna
+
+If you want a robust way:
+
+pip install optuna
+
+And use transformers.Trainer + Optuna’s suggest_float, suggest_categorical, suggest_int for smart sampling.
+
+⸻
+
+✅ Do you want me to write a complete working optuna version or a custom evolutionary loop?
+
+I can share ready-to-run code if you want!
