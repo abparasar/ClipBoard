@@ -1,129 +1,27 @@
-Got it — let’s break this down properly so you can measure the variability between the two testers for each metric.
+import os
 
-⸻
+for i, params in enumerate(sampler):
+    trial_dir = f"./results/trial_{i+1}"
+    checkpoint_dir = os.path.join(trial_dir, "checkpoint-xxx")  # generic path
 
-✅ What you have
-	•	1 Excel file
-	•	1 column with 500 rows of summaries (transcripts)
-	•	2 testers rate each row on:
-	•	Metric 1: 1–5 scale (ordinal)
-	•	Metric 2: 0 or 1 (binary)
+    if os.path.exists(trial_dir):
+        print(f"✅ Skipping Trial {i+1} — results already exist at {trial_dir}")
+        continue
 
-⸻
+    print(f"🚀 Running Trial {i+1} with:")
+    for key, value in params.items():
+        print(f"   {key}: {value}")
+    print()
 
-✅ What you want
-	•	Measure how consistent the two testers are:
-	•	For Metric 1 → Agreement on ordinal scores
-	•	For Metric 2 → Agreement on binary labels
+    args = get_training_arguments(params, output_dir=trial_dir)
 
-⸻
+    trainer = Seq2SeqTrainer(
+        model=model,
+        args=args,
+        train_dataset=train_data,
+        eval_dataset=eval_data,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+    )
 
-✅ How to check agreement
-
-Here’s what’s standard:
-
-Metric	Common agreement check
-Metric 1 (1–5)	Cohen’s Kappa, Weighted Kappa, or Intraclass Correlation Coefficient (ICC)
-Metric 2 (0/1)	Cohen’s Kappa, Simple percent agreement
-
-
-⸻
-
-✅ Why these
-	•	Cohen’s Kappa → Measures agreement beyond chance.
-	•	Weighted Kappa → Better for ordinal scales since it penalizes bigger disagreements more.
-	•	ICC → Good if you treat scores as continuous/ordinal data.
-
-⸻
-
-✅ How to do it in Excel + Python
-
-Here’s a clear process:
-
-⸻
-
-📂 1️⃣ Prepare your data
-
-Your sheet should look like:
-
-Summary	Tester1_Metric1	Tester2_Metric1	Tester1_Metric2	Tester2_Metric2
-…	…	…	…	…
-
-
-⸻
-
-🧮 2️⃣ Run agreement checks
-
-👉 For Metric 1 (1–5):
-
-Option A: Weighted Cohen’s Kappa
-
-Python example:
-
-import pandas as pd
-from sklearn.metrics import cohen_kappa_score
-
-df = pd.read_excel('your_file.xlsx')
-
-kappa_metric1 = cohen_kappa_score(
-    df['Tester1_Metric1'],
-    df['Tester2_Metric1'],
-    weights='quadratic'  # weighted kappa for ordinal
-)
-
-print(f"Weighted Cohen's Kappa for Metric 1: {kappa_metric1:.3f}")
-
-
-⸻
-
-👉 For Metric 2 (0/1):
-
-Option B: Simple Cohen’s Kappa
-
-kappa_metric2 = cohen_kappa_score(
-    df['Tester1_Metric2'],
-    df['Tester2_Metric2']
-)
-
-print(f"Cohen's Kappa for Metric 2: {kappa_metric2:.3f}")
-
-
-⸻
-
-📊 3️⃣ Interpret
-
-Kappa	Strength of agreement
-≤ 0	Poor
-0.01–0.20	Slight
-0.21–0.40	Fair
-0.41–0.60	Moderate
-0.61–0.80	Substantial
-0.81–1.00	Almost perfect
-
-
-⸻
-
-✅ Extra: See disagreements
-
-If you want to see where they disagree, do:
-
-df['Disagree_Metric1'] = df['Tester1_Metric1'] != df['Tester2_Metric1']
-df['Disagree_Metric2'] = df['Tester1_Metric2'] != df['Tester2_Metric2']
-
-# Count
-print(df['Disagree_Metric1'].value_counts())
-print(df['Disagree_Metric2'].value_counts())
-
-
-⸻
-
-📌 If you want to do it all in Excel
-
-You’ll need to:
-	•	Calculate percent agreement manually
-	•	Use a confusion matrix for each metric
-	•	Or run a macro / plugin for Cohen’s Kappa
-
-⸻
-
-If you’d like, I can make you a ready Python script or Excel sheet to calculate all of this. Want that?
+    trainer.train()
