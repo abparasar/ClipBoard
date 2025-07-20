@@ -1,107 +1,33 @@
-This is a great question and touches on an increasingly important area: LLM-based evaluation versus metric-based evaluation (like BERTScore). Let’s break down what might be happening and how to improve the LLM judge accuracy on Pegasus summaries.
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{booktabs}
+\begin{document}
 
-⸻
+\begin{table}[h!]
+\centering
+\caption{Technical Feature Comparison: BART-Base vs BART-Large vs Pegasus}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Feature} & \textbf{Description} & \textbf{BART-Base} & \textbf{BART-Large} & \textbf{Pegasus} \\
+\midrule
+Model Type & Transformer Seq2Seq & Yes & Yes & Yes \\
+Parameters & Total trainable params & 139M & 406M & 568M \\
+Encoder Layers & Number of encoder layers & 6 & 12 & 16 \\
+Decoder Layers & Number of decoder layers & 6 & 12 & 16 \\
+Hidden Size & Dimensionality of hidden states & 768 & 1024 & 1024 \\
+FFN Size & Feed-forward inner layer size & 3072 & 4096 & 4096 \\
+Attention Heads & Number of attention heads & 12 & 16 & 16 \\
+Max Position Embeddings & Max token positions & 1024 & 1024 & 1024 \\
+Pretraining Objective & Training loss type & Denoising Autoencoder & Denoising Autoencoder & Gap Sentence Generation \\
+Tokenization & Tokenizer used & BPE (fairseq) & BPE (fairseq) & SentencePiece \\
+Training Data & Pretraining corpus & BookCorpus, CC-News, etc. & Same as base & Huge web corpus (C4, HugeNews, etc.) \\
+Pretraining Tokens & Total tokens used in pretraining & ~160B & ~160B & ~500B \\
+Training Framework & Original training library & fairseq & fairseq & TensorFlow / fairseq \\
+Finetuning Task Types & Summarization, QA, etc. & Yes & Yes & Optimized for summarization \\
+Language Coverage & Multilingual or monolingual & Monolingual (English) & Monolingual (English) & Monolingual (English) \\
+Typical Use Case & Common downstream task & General NLP & General NLP & Summarization \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-⚠️ Why Your LLaMA 70B Judge Is Scoring Pegasus Lower Despite Similar BERTScores
-
-1. Bias from Few-Shot Examples
-
-If your few-shot examples given to LLaMA-70B are mostly from BART-Large, then:
-	•	The judge implicitly learns what “good summary” means only in BART terms.
-	•	So it may penalize stylistic or structural differences in Pegasus summaries, even when they are semantically accurate.
-
-2. Style vs. Semantic Bias
-
-BERTScore evaluates semantic similarity based on contextual embeddings, so two summaries can score similarly even if:
-	•	BART uses extractive and direct phrasing.
-	•	Pegasus uses abstractive, paraphrased content.
-
-LLaMA, however, being language-sensitive, may penalize:
-	•	Overly concise Pegasus outputs
-	•	Abstract expressions
-	•	Different sentence structures
-
-3. Prompt Bias / Hallucination Sensitivity
-
-LLaMA might be:
-	•	More sensitive to minor hallucinations or paraphrasing in Pegasus summaries
-	•	Interpreting Pegasus outputs as less aligned to source texts even if meaning is preserved
-
-⸻
-
-✅ How to Improve LLaMA 70B Judge Accuracy on Pegasus Summaries
-
-1. Balance the Few-Shot Examples
-
-Provide diverse and high-quality examples from both:
-	•	BART-Large summaries
-	•	Pegasus summaries
-Especially if their semantic meaning is equivalent. Show LLaMA what a “good Pegasus summary” looks like too.
-
-Example Prompt Setup:
-
-You are a summarization quality judge. Score between 1 (poor) and 5 (excellent).
-
-Here are examples:
-
-TEXT: [source text]
-SUMMARY: [Pegasus summary]
-SCORE: 5
-
-TEXT: [source text]
-SUMMARY: [Pegasus summary with minor issues]
-SCORE: 3
-
-TEXT: [source text]
-SUMMARY: [BART summary]
-SCORE: 5
-
-...
-
-Now evaluate the following:
-TEXT: {text}
-SUMMARY: {model_summary}
-SCORE:
-
-2. Give Dual Reference Ground Truth
-
-Include the ground truth and ask the judge to score based on fidelity and completeness compared to both input text and reference summary, not just the input.
-
-3. Use Chain-of-Thought Prompting
-
-Ask LLaMA to reason before scoring, e.g.:
-
-“Evaluate how well the summary captures the key points of the text. Comment on coverage, factual correctness, and conciseness. Then assign a score.”
-
-This leads to more transparent and possibly fairer scoring.
-
-4. Prompt Neutralization
-
-Avoid words in the prompt that bias toward one model (e.g., “BART-generated summaries are excellent…”). Keep it neutral.
-
-⸻
-
-🛠 Optional: Fine-Tune or Calibrate Your LLaMA Judge
-
-If you’re repeatedly using it for evaluation:
-	•	You can fine-tune LLaMA 70B on summarization rating data (e.g., OpenAI’s summarization feedback dataset).
-	•	Or use smaller models fine-tuned for evaluation, like:
-	•	gpt-4 (via API)
-	•	openai/summarize_from_feedback fine-tuned models
-	•	llm-blender/summary-quality-eval (on HF)
-
-⸻
-
-📊 Extra Tip: Compare Pegasus and BART on Specific Axes
-
-Use your LLaMA judge or scripted rubric to compare both models on:
-	•	Coverage
-	•	Factual correctness
-	•	Conciseness
-	•	Coherence
-
-Often, one model is better in abstraction (Pegasus) and the other in extractive faithfulness (BART). LLaMA might overvalue one over the other unless explicitly balanced.
-
-⸻
-
-Would you like help crafting an optimal prompt for this? I can also help design a calibration experiment if needed.
+\end{document}
