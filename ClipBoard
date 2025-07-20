@@ -5,6 +5,8 @@
 \usepackage{caption}
 \captionsetup[table]{skip=8pt}
 
+\renewcommand{\arraystretch}{1.3}  % Increases row height slightly
+
 \begin{document}
 
 \begin{table}[h!]
