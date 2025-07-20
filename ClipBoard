@@ -1,38 +1,27 @@
 \documentclass{article}
-\usepackage{geometry}
 \usepackage{booktabs}
-\usepackage{array}
+\usepackage{geometry}
 \usepackage{caption}
-\captionsetup[table]{skip=8pt}
+\usepackage{array}
 
-\renewcommand{\arraystretch}{1.3}  % Slight row spacing
+\renewcommand{\arraystretch}{1.3}
 
 \begin{document}
 
 \begin{table}[h!]
 \centering
-\footnotesize  % Change font size here (e.g., \small, \footnotesize, \scriptsize)
-\caption{Technical Feature Comparison: BART-Large vs BART-Base vs Pegasus}
-\begin{tabular}{@{}p{5.6cm}p{2.4cm}p{2.4cm}p{2.4cm}@{}}
+\small
+\caption{Model Performance Comparison Across Metrics and Months}
+\begin{tabular}{@{}p{4.2cm}p{2.5cm}p{2.5cm}p{2.5cm}@{}}
 \toprule
-\textbf{Feature} & \textbf{BART-Large} & \textbf{BART-Base} & \textbf{Pegasus} \\
+\textbf{Metric / Month} & \textbf{Model A} & \textbf{Model B} & \textbf{Model C} \\
 \midrule
-\textbf{Model Type (Encoder-decoder Transformer)} & Yes & Yes & Yes \\
-\textbf{Total Parameters (Trainable weights in millions)} & 406M & 139M & 568M \\
-\textbf{Encoder Layers (Number of encoder transformer blocks)} & 12 & 6 & 16 \\
-\textbf{Decoder Layers (Number of decoder transformer blocks)} & 12 & 6 & 16 \\
-\textbf{Hidden Size (Dimension of hidden states and embeddings)} & 1024 & 768 & 1024 \\
-\textbf{Feedforward Network Size (Intermediate layer size)} & 4096 & 3072 & 4096 \\
-\textbf{Attention Heads (Number of parallel attention heads)} & 16 & 12 & 16 \\
-\textbf{Max Position Embeddings (Token limit per input)} & 1024 & 1024 & 1024 \\
-\textbf{Pretraining Objective (Learning strategy)} & Denoising autoencoder & Denoising autoencoder & Gap sentence generation (GSG) \\
-\textbf{Tokenizer (Subword tokenizer type)} & BPE (fairseq) & BPE (fairseq) & SentencePiece \\
-\textbf{Pretraining Corpus (Data sources used)} & BookCorpus, CC-News, Wikipedia, etc. & Same as BART-Large & C4, HugeNews, Wikipedia, etc. \\
-\textbf{Pretraining Tokens (Estimated total tokens seen)} & \textasciitilde160B & \textasciitilde160B & \textasciitilde500B \\
-\textbf{Training Framework (Original implementation)} & fairseq (PyTorch) & fairseq (PyTorch) & TensorFlow + fairseq \\
-\textbf{Finetuning Applications (Downstream task adaptability)} & Summarization, QA, Translation & Same & Summarization-focused \\
-\textbf{Language Coverage (Languages supported)} & English only & English only & English only \\
-\textbf{Typical Use Case (Best suited applications)} & General-purpose NLP & General-purpose NLP & Abstractive summarization \\
+Accuracy (June)   & 0.91 & 0.89 & 0.93 \\
+Precision (June)  & 0.88 & 0.85 & 0.90 \\
+F1 Score (June)   & 0.89 & 0.86 & 0.91 \\
+Accuracy (July)   & 0.92 & 0.90 & 0.94 \\
+Precision (July)  & 0.89 & 0.87 & 0.91 \\
+F1 Score (July)   & 0.90 & 0.88 & 0.92 \\
 \bottomrule
 \end{tabular}
 \end{table}
