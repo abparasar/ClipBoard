@@ -1,32 +1,52 @@
 \documentclass{article}
 \usepackage{geometry}
 \usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\captionsetup[table]{skip=8pt}
+
 \begin{document}
 
 \begin{table}[h!]
 \centering
-\caption{Technical Feature Comparison: BART-Base vs BART-Large vs Pegasus}
-\begin{tabular}{@{}llccc@{}}
-\toprule
-\textbf{Feature} & \textbf{Description} & \textbf{BART-Base} & \textbf{BART-Large} & \textbf{Pegasus} \\
-\midrule
-Model Type & Transformer Seq2Seq & Yes & Yes & Yes \\
-Parameters & Total trainable params & 139M & 406M & 568M \\
-Encoder Layers & Number of encoder layers & 6 & 12 & 16 \\
-Decoder Layers & Number of decoder layers & 6 & 12 & 16 \\
-Hidden Size & Dimensionality of hidden states & 768 & 1024 & 1024 \\
-FFN Size & Feed-forward inner layer size & 3072 & 4096 & 4096 \\
-Attention Heads & Number of attention heads & 12 & 16 & 16 \\
-Max Position Embeddings & Max token positions & 1024 & 1024 & 1024 \\
-Pretraining Objective & Training loss type & Denoising Autoencoder & Denoising Autoencoder & Gap Sentence Generation \\
-Tokenization & Tokenizer used & BPE (fairseq) & BPE (fairseq) & SentencePiece \\
-Training Data & Pretraining corpus & BookCorpus, CC-News, etc. & Same as base & Huge web corpus (C4, HugeNews, etc.) \\
-Pretraining Tokens & Total tokens used in pretraining & ~160B & ~160B & ~500B \\
-Training Framework & Original training library & fairseq & fairseq & TensorFlow / fairseq \\
-Finetuning Task Types & Summarization, QA, etc. & Yes & Yes & Optimized for summarization \\
-Language Coverage & Multilingual or monolingual & Monolingual (English) & Monolingual (English) & Monolingual (English) \\
-Typical Use Case & Common downstream task & General NLP & General NLP & Summarization \\
-\bottomrule
+\small
+\caption{Technical Feature Comparison: BART-Large vs BART-Base vs Pegasus}
+\begin{tabular}{|p{5.6cm}|p{2.4cm}|p{2.4cm}|p{2.4cm}|}
+\hline
+\textbf{Feature} & \textbf{BART-Large} & \textbf{BART-Base} & \textbf{Pegasus} \\
+\hline
+Model Type (Encoder-decoder Transformer) & Yes & Yes & Yes \\
+\hline
+Total Parameters (Trainable weights in millions) & 406M & 139M & 568M \\
+\hline
+Encoder Layers (Number of encoder transformer blocks) & 12 & 6 & 16 \\
+\hline
+Decoder Layers (Number of decoder transformer blocks) & 12 & 6 & 16 \\
+\hline
+Hidden Size (Dimension of hidden states and embeddings) & 1024 & 768 & 1024 \\
+\hline
+Feedforward Network Size (Intermediate layer size) & 4096 & 3072 & 4096 \\
+\hline
+Attention Heads (Number of parallel attention heads) & 16 & 12 & 16 \\
+\hline
+Max Position Embeddings (Token limit per input) & 1024 & 1024 & 1024 \\
+\hline
+Pretraining Objective (Learning strategy) & Denoising autoencoder & Denoising autoencoder & Gap sentence generation (GSG) \\
+\hline
+Tokenizer (Subword tokenizer type) & BPE (fairseq) & BPE (fairseq) & SentencePiece \\
+\hline
+Pretraining Corpus (Data sources used) & BookCorpus, CC-News, Wikipedia, etc. & Same as BART-Large & C4, HugeNews, Wikipedia, etc. \\
+\hline
+Pretraining Tokens (Estimated total tokens seen) & \textasciitilde160B & \textasciitilde160B & \textasciitilde500B \\
+\hline
+Training Framework (Original implementation) & fairseq (PyTorch) & fairseq (PyTorch) & TensorFlow + fairseq \\
+\hline
+Finetuning Applications (Downstream task adaptability) & Summarization, QA, Translation & Same & Summarization-focused \\
+\hline
+Language Coverage (Languages supported) & English only & English only & English only \\
+\hline
+Typical Use Case (Best suited applications) & General-purpose NLP & General-purpose NLP & Abstractive summarization \\
+\hline
 \end{tabular}
 \end{table}
 
