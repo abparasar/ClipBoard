@@ -1,10 +1,6 @@
-
-
-# Only show warnings and errors
-logging.basicConfig(level=logging.ERROR)
-transformers.logging.set_verbosity_error()
-datasets.logging.set_verbosity_error()
-import itertools
+import os
+import logging
+import warnings
 import pandas as pd
 import torch
 from transformers import (
@@ -14,20 +10,23 @@ from transformers import (
 from datasets import load_dataset
 from evaluate import load as load_metric
 import bert_score
+from sklearn.model_selection import ParameterSampler
 
-# ======= Dataset (use your own if needed) =======
+# ==== SILENCE all verbose logs ====
+warnings.filterwarnings("ignore")
+logging.basicConfig(level=logging.ERROR)
+os.environ["TRANSFORMERS_VERBOSITY"] = "error"
+
+import transformers
+import datasets
+transformers.logging.set_verbosity_error()
+datasets.logging.set_verbosity_error()
+
+# ==== Load Dataset ====
 dataset = load_dataset("xsum")
 tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
 
-def preprocess(example):
-    inputs = tokenizer(example['document'], truncation=True, padding="max_length", max_length=512)
-    targets = tokenizer(example['summary'], truncation=True, padding="max_length", max_length=128)
-    inputs['labels'] = targets['input_ids']
-    return inputs
-
-tokenized_dataset = dataset.map(preprocess, batched=True)
-
-# ======= Metrics =======
+# ==== Metrics ====
 rouge = load_metric("rouge")
 
 def compute_metrics(eval_preds):
@@ -47,62 +46,98 @@ def compute_metrics(eval_preds):
         "bertscore_f1": avg_bertscore_f1
     }
 
-# ======= Exhaustive Grid =======
+# ==== Dynamic Preprocessing Function ====
+def make_preprocessing_fn(max_source_length, max_target_length=128):
+    def preprocess(example):
+        inputs = tokenizer(
+            example['document'], truncation=True, padding="max_length",
+            max_length=max_source_length
+        )
+        targets = tokenizer(
+            example['summary'], truncation=True, padding="max_length",
+            max_length=max_target_length
+        )
+        inputs['labels'] = targets['input_ids']
+        return inputs
+    return preprocess
+
+# ==== Hyperparameter Space ====
 param_grid = {
     'learning_rate': [1e-5, 3e-5, 5e-5],
     'per_device_train_batch_size': [4, 8],
     'gradient_accumulation_steps': [1, 2],
     'num_train_epochs': [2, 3],
     'weight_decay': [0.0, 0.01],
-    'warmup_ratio': [0.0, 0.1],
-    'lr_scheduler_type': ['linear', 'cosine', 'polynomial'],
+    'warmup_steps': [0, 250, 500],
+    'lr_scheduler_type': ['linear', 'cosine'],
     'max_grad_norm': [0.8, 1.0],
     'label_smoothing_factor': [0.0, 0.1],
     'fp16': [True],
+    'evaluation_strategy': ['epoch'],
+    'eval_steps': [500],
     'save_total_limit': [1],
+    'max_source_length': [512, 1024]
 }
 
-# Cartesian product
-keys, values = zip(*param_grid.items())
-combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+n_trials = 20
+random_state = 42
 
-# CSV Setup
+param_combinations = list(ParameterSampler(param_grid, n_iter=n_trials, random_state=random_state))
+
+# ==== Result CSV Setup ====
 csv_file = "results.csv"
-columns = list(param_grid.keys()) + ["rouge1", "rouge2", "rougeL", "rougeLsum", "bertscore_f1"]
+columns = list(param_grid.keys()) + ["train_batch_size", "rouge1", "rouge2", "rougeL", "rougeLsum", "bertscore_f1"]
 pd.DataFrame(columns=columns).to_csv(csv_file, index=False)
 
-# Run all combinations
-for i, params in enumerate(combinations):
-    print(f"\n🔁 Running {i+1}/{len(combinations)} | Params: {params}")
-    
+# ==== Tuning Loop ====
+for i, params in enumerate(param_combinations):
+    print(f"\n🚀 Trial {i+1}/{n_trials} | Params: {params}")
+
+    # Preprocess with selected max_source_length
+    preprocess_fn = make_preprocessing_fn(params['max_source_length'])
+
+    train_subset = dataset["train"].select(range(10_000)).map(preprocess_fn, batched=True)
+    eval_subset = dataset["validation"].select(range(500)).map(preprocess_fn, batched=True)
+
     model = BartForConditionalGeneration.from_pretrained("facebook/bart-large")
+
+    # Extract and clean TrainingArguments
+    eval_strategy = params.get('evaluation_strategy', 'epoch')
+    eval_steps = params.get('eval_steps', None)
 
     args = TrainingArguments(
         output_dir=f"./runs/run_{i}",
-        evaluation_strategy="epoch",
+        overwrite_output_dir=True,
+        evaluation_strategy=eval_strategy,
+        eval_steps=eval_steps if eval_strategy == 'steps' else None,
         logging_strategy="no",
         save_strategy="no",
         report_to="none",
-        overwrite_output_dir=True,
-        **params
+        disable_tqdm=True,
+        **{k: v for k, v in params.items() if k not in ['evaluation_strategy', 'eval_steps', 'max_source_length']}
     )
 
     trainer = Trainer(
         model=model,
         args=args,
-        train_dataset=tokenized_dataset["train"].select(range(1000)),
-        eval_dataset=tokenized_dataset["validation"].select(range(200)),
+        train_dataset=train_subset,
+        eval_dataset=eval_subset,
         tokenizer=tokenizer,
         compute_metrics=compute_metrics
     )
 
+    # ==== Train and Evaluate ====
     trainer.train()
     metrics = trainer.evaluate()
 
-    # Save to CSV
+    # ==== Record Results ====
     record = {**params}
+    record['train_batch_size'] = (
+        params['per_device_train_batch_size'] * params['gradient_accumulation_steps']
+    )
     for k in ["rouge1", "rouge2", "rougeL", "rougeLsum", "bertscore_f1"]:
         record[k] = metrics.get(k, None)
+
     pd.DataFrame([record]).to_csv(csv_file, mode='a', header=False, index=False)
 
     del trainer, model
