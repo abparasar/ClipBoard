@@ -1,2 +1,9 @@
+from transformers import AutoModelForSeq2SeqLM, GenerationConfig
 
-Without more context, it’s truly ambiguous. But with context (e.g., previous sentence: “Ron prepared to fight”), a model with self-attention can accurately infer that Ron raised the wand.
+model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large")
+
+model.generation_config = GenerationConfig(
+    max_new_tokens=128,
+    min_length=30,
+    num_beams=4
+)
