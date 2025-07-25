@@ -1,3 +1,9 @@
+
+
+# Only show warnings and errors
+logging.basicConfig(level=logging.ERROR)
+transformers.logging.set_verbosity_error()
+datasets.logging.set_verbosity_error()
 import itertools
 import pandas as pd
 import torch
