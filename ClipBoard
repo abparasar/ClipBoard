@@ -1,3 +1,28 @@
+
+from sklearn.model_selection import ParameterSampler
+
+param_grid = {
+    "learning_rate": [5e-5, 3e-5, 2e-5, 1e-5],
+    "per_device_train_batch_size": [4, 8],
+    "gradient_accumulation_steps": [1, 2, 4],
+    "num_train_epochs": [2, 3, 4],
+    "weight_decay": [0.0, 0.01],
+    "warmup_steps": [0, 200, 500],
+    "lr_scheduler_type": ["linear", "cosine"],
+    "max_grad_norm": [0.8, 1.0],
+    "label_smoothing_factor": [0.0, 0.1],
+    "fp16": [True],
+    "evaluation_strategy": ["steps"],
+    "eval_steps": [500],
+    "save_total_limit": [1],
+    "max_source_length": [512, 1024]
+}
+
+n_trials = 20
+random_state = 42
+
+param_combinations = list(ParameterSampler(param_grid, n_iter=n_trials, random_state=random_state))
+
 args = Seq2SeqTrainingArguments(
     output_dir="./runs/manual_trial",
     overwrite_output_dir=True,
