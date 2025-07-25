@@ -1,22 +1,103 @@
-\documentclass{article}
-\usepackage[table]{xcolor}
-\usepackage{booktabs}
-\usepackage{array}
+import itertools
+import pandas as pd
+import torch
+from transformers import (
+    BartForConditionalGeneration, BartTokenizer,
+    Trainer, TrainingArguments
+)
+from datasets import load_dataset
+from evaluate import load as load_metric
+import bert_score
 
-\definecolor{lightgray}{gray}{0.95}
+# ======= Dataset (use your own if needed) =======
+dataset = load_dataset("xsum")
+tokenizer = BartTokenizer.from_pretrained("facebook/bart-large")
 
-\begin{document}
+def preprocess(example):
+    inputs = tokenizer(example['document'], truncation=True, padding="max_length", max_length=512)
+    targets = tokenizer(example['summary'], truncation=True, padding="max_length", max_length=128)
+    inputs['labels'] = targets['input_ids']
+    return inputs
 
-\begin{tabular}{lccc}
-\toprule
-\textbf{Metric / Month} & \textbf{Model A} & \textbf{Model B} & \textbf{Model C} \\
-\arrayrulecolor{lightgray}\hline
-Accuracy (June)   & 0.91 & 0.89 & 0.93 \\
-Precision (June)  & 0.88 & 0.85 & 0.90 \\
-\arrayrulecolor{lightgray}\hline
-F1 Score (June)   & 0.89 & 0.86 & 0.91 \\
-Accuracy (July)   & 0.92 & 0.90 & 0.94 \\
-\arrayrulecolor{black}\bottomrule
-\end{tabular}
+tokenized_dataset = dataset.map(preprocess, batched=True)
 
-\end{document}
+# ======= Metrics =======
+rouge = load_metric("rouge")
+
+def compute_metrics(eval_preds):
+    preds, labels = eval_preds
+    preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+    labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+    rouge_result = rouge.compute(predictions=preds, references=labels, use_stemmer=True)
+    bertscore_result = bert_score.score(preds, labels, lang="en", verbose=False)
+    avg_bertscore_f1 = bertscore_result[2].mean().item()
+
+    return {
+        "rouge1": rouge_result["rouge1"].mid.fmeasure,
+        "rouge2": rouge_result["rouge2"].mid.fmeasure,
+        "rougeL": rouge_result["rougeL"].mid.fmeasure,
+        "rougeLsum": rouge_result["rougeLsum"].mid.fmeasure,
+        "bertscore_f1": avg_bertscore_f1
+    }
+
+# ======= Exhaustive Grid =======
+param_grid = {
+    'learning_rate': [1e-5, 3e-5, 5e-5],
+    'per_device_train_batch_size': [4, 8],
+    'gradient_accumulation_steps': [1, 2],
+    'num_train_epochs': [2, 3],
+    'weight_decay': [0.0, 0.01],
+    'warmup_ratio': [0.0, 0.1],
+    'lr_scheduler_type': ['linear', 'cosine', 'polynomial'],
+    'max_grad_norm': [0.8, 1.0],
+    'label_smoothing_factor': [0.0, 0.1],
+    'fp16': [True],
+    'save_total_limit': [1],
+}
+
+# Cartesian product
+keys, values = zip(*param_grid.items())
+combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+
+# CSV Setup
+csv_file = "results.csv"
+columns = list(param_grid.keys()) + ["rouge1", "rouge2", "rougeL", "rougeLsum", "bertscore_f1"]
+pd.DataFrame(columns=columns).to_csv(csv_file, index=False)
+
+# Run all combinations
+for i, params in enumerate(combinations):
+    print(f"\n🔁 Running {i+1}/{len(combinations)} | Params: {params}")
+    
+    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large")
+
+    args = TrainingArguments(
+        output_dir=f"./runs/run_{i}",
+        evaluation_strategy="epoch",
+        logging_strategy="no",
+        save_strategy="no",
+        report_to="none",
+        overwrite_output_dir=True,
+        **params
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=args,
+        train_dataset=tokenized_dataset["train"].select(range(1000)),
+        eval_dataset=tokenized_dataset["validation"].select(range(200)),
+        tokenizer=tokenizer,
+        compute_metrics=compute_metrics
+    )
+
+    trainer.train()
+    metrics = trainer.evaluate()
+
+    # Save to CSV
+    record = {**params}
+    for k in ["rouge1", "rouge2", "rougeL", "rougeLsum", "bertscore_f1"]:
+        record[k] = metrics.get(k, None)
+    pd.DataFrame([record]).to_csv(csv_file, mode='a', header=False, index=False)
+
+    del trainer, model
+    torch.cuda.empty_cache()
