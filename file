@@ -1,9 +1,2 @@
-from transformers import AutoModelForSeq2SeqLM, GenerationConfig
-
-model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-large")
-
-model.generation_config = GenerationConfig(
-    max_new_tokens=128,
-    min_length=30,
-    num_beams=4
-)
+model.generation_config.max_new_tokens = 128
+model.generation_config.min_length = 30
