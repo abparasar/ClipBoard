@@ -1,2 +1,5 @@
-model.generation_config.max_new_tokens = 128
-model.generation_config.min_length = 30
+def filter_by_token_length(example):
+    tokens = tokenizer(example["source"], truncation=False, add_special_tokens=False)
+    return len(tokens["input_ids"]) >= 64
+
+filtered_dataset = raw_dataset.filter(filter_by_token_length)
