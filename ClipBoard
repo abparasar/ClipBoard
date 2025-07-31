@@ -1,15 +1,13 @@
-class IntentDataset(Dataset):
-    def __init__(self, texts, labels):
-        texts = [str(x) if x is not None else '' for x in texts]  # Convert to string
-        self.encodings = tokenizer(texts, truncation=True, padding='max_length', max_length=MAX_LEN)
-        self.labels = labels
+from sklearn.metrics import classification_report
 
-    def __len__(self):
-        return len(self.labels)
+# All possible class IDs
+all_class_ids = list(range(len(le.classes_)))
 
-    def __getitem__(self, idx):
-        return {
-            'input_ids': torch.tensor(self.encodings['input_ids'][idx]),
-            'attention_mask': torch.tensor(self.encodings['attention_mask'][idx]),
-            'labels': torch.tensor(self.labels[idx])
-        }
+report = classification_report(
+    y_true=all_labels,
+    y_pred=all_preds,
+    labels=all_class_ids,                # ← Ensures all classes are expected
+    target_names=le.classes_,            # ← Matches label IDs
+    zero_division=0,                     # ← Avoid divide-by-zero warnings
+    output_dict=True
+)
