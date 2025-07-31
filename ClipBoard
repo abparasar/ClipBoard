@@ -1,96 +1,30 @@
-import pandas as pd
-import torch
-from transformers import BertTokenizer, BertForSequenceClassification
-from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score
+from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
-import pickle
 
-# Constants
-MODEL_PATH = 'best_model_card_decline.pt'
-EXCEL_FILE = 'new_intents.xlsx'
-SHEET_NAME = 'x'
-MAX_LEN = 128
+# Assuming df has 'true_label' and 'predicted_label' columns
+y_true = df['true_label']
+y_pred = df['predicted_label']
 
-# 1. Load Excel Data
-df_new = pd.read_excel(EXCEL_FILE, sheet_name=SHEET_NAME)
-assert 'text' in df_new.columns and 'true_label' in df_new.columns, "Excel must contain 'text' and 'true_label'."
+# Optionally, convert to consistent label set (same ordering)
+from sklearn.preprocessing import LabelEncoder
 
-texts = df_new['text'].astype(str).fillna('').tolist()
-true_labels = df_new['true_label'].tolist()
+le = LabelEncoder()
+all_labels = pd.concat([y_true, y_pred])
+le.fit(all_labels)
 
-# 2. Load tokenizer, label encoder, model
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+y_true_enc = le.transform(y_true)
+y_pred_enc = le.transform(y_pred)
+label_names = le.classes_
 
-with open('label_encoder.pkl', 'rb') as f:
-    le = pickle.load(f)
+# Compute confusion matrix
+cm = confusion_matrix(y_true_enc, y_pred_enc)
 
-num_labels = len(le.classes_)
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_labels)
-model.load_state_dict(torch.load(MODEL_PATH))
-model.eval()
-model.cuda()
-
-# 3. Predict without batching
-predictions = []
-probs = []
-
-for text in texts:
-    inputs = tokenizer(text, return_tensors='pt', truncation=True, padding='max_length', max_length=MAX_LEN)
-    inputs = {k: v.cuda() for k, v in inputs.items()}
-    with torch.no_grad():
-        outputs = model(**inputs)
-        logits = outputs.logits
-        pred_id = torch.argmax(logits, dim=1).item()
-        prob = torch.softmax(logits, dim=1)[0][pred_id].item()
-        predictions.append(pred_id)
-        probs.append(prob)
-
-# 4. Decode labels
-predicted_labels = le.inverse_transform(predictions)
-true_label_ids = le.transform(true_labels)
-
-# 5. Save predictions to Excel
-df_new['predicted_intent'] = predicted_labels
-df_new['confidence'] = probs
-df_new.to_excel('scored_intents_with_metrics.xlsx', index=False)
-
-# 6. Classification Report
-print("\n📊 Classification Report:")
-report = classification_report(true_label_ids, predictions, target_names=le.classes_, zero_division=0)
-print(report)
-
-# 7. Confusion Matrix (Top N classes)
-N = 10
-top_labels = pd.Series(true_labels).value_counts().head(N).index.tolist()
-top_label_ids = le.transform(top_labels)
-
-cm = confusion_matrix(true_label_ids, predictions, labels=top_label_ids)
+# Display with heatmap
 plt.figure(figsize=(10, 8))
-sns.heatmap(cm, annot=True, fmt='d', xticklabels=top_labels, yticklabels=top_labels, cmap="Blues")
-plt.title("Confusion Matrix (Top 10 Classes)")
+sns.heatmap(cm, annot=True, fmt='d', xticklabels=label_names, yticklabels=label_names, cmap="Blues")
 plt.xlabel("Predicted")
-plt.ylabel("True")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
 plt.tight_layout()
 plt.show()
-
-# 8. Metrics summary
-acc = accuracy_score(true_label_ids, predictions)
-macro_f1 = f1_score(true_label_ids, predictions, average='macro')
-micro_f1 = f1_score(true_label_ids, predictions, average='micro')
-print(f"\n✅ Accuracy   : {acc:.4f}")
-print(f"✅ Macro F1   : {macro_f1:.4f}")
-print(f"✅ Micro F1   : {micro_f1:.4f}")
-
-# 9. Target class metrics (e.g., card_decline_problem)
-target_class = 'card_decline_problem'
-if target_class in le.classes_:
-    target_id = le.transform([target_class])[0]
-    target_report = classification_report(true_label_ids, predictions, labels=[target_id],
-                                          target_names=[target_class], zero_division=0, output_dict=True)
-    print(f"\n🎯 Metrics for '{target_class}':")
-    print(f"Precision: {target_report[target_class]['precision']:.4f}")
-    print(f"Recall   : {target_report[target_class]['recall']:.4f}")
-    print(f"F1-Score : {target_report[target_class]['f1-score']:.4f}")
-else:
-    print(f"\n⚠️ Warning: Target class '{target_class}' not present in label encoder.")
