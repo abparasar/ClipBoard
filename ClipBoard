@@ -1,44 +1,9 @@
-import pandas as pd
-from sklearn.metrics import confusion_matrix, classification_report, precision_score, recall_score, f1_score
-import seaborn as sns
-import matplotlib.pyplot as plt
+# Get predicted probabilities
+probs = torch.softmax(outputs.logits, dim=1)
 
-# Step 1: Setup
-# Your DataFrame must have these two columns:
-# - df['true_label']: actual labels
-# - df['predicted_label']: predicted labels
+# Index of 'card_decline_problem' in the label encoder
+card_idx = le.transform(['card_decline_problem'])[0]
 
-# Step 2: Map to binary classes: 'card_decline_problem' vs 'other'
-df['true_binary'] = df['true_label'].apply(lambda x: 'card_decline_problem' if x == 'card_decline_problem' else 'other')
-df['pred_binary'] = df['predicted_label'].apply(lambda x: 'card_decline_problem' if x == 'card_decline_problem' else 'other')
-
-y_true = df['true_binary']
-y_pred = df['pred_binary']
-labels = ['card_decline_problem', 'other']
-
-# Step 3: Confusion Matrix
-cm = confusion_matrix(y_true, y_pred, labels=labels)
-print("🧮 Confusion Matrix:")
-print(pd.DataFrame(cm, index=['Actual_card', 'Actual_other'], columns=['Pred_card', 'Pred_other']))
-
-# Optional heatmap
-sns.heatmap(cm, annot=True, fmt='d', xticklabels=labels, yticklabels=labels, cmap='Blues')
-plt.xlabel('Predicted')
-plt.ylabel('Actual')
-plt.title('Binary Confusion Matrix: card_decline_problem vs other')
-plt.tight_layout()
-plt.show()
-
-# Step 4: Precision, Recall, F1
-precision = precision_score(y_true, y_pred, pos_label='card_decline_problem', zero_division=0)
-recall = recall_score(y_true, y_pred, pos_label='card_decline_problem', zero_division=0)
-f1 = f1_score(y_true, y_pred, pos_label='card_decline_problem', zero_division=0)
-
-print(f"\n📊 Evaluation for class 'card_decline_problem':")
-print(f"Precision: {precision:.4f}")
-print(f"Recall:    {recall:.4f}")
-print(f"F1 Score:  {f1:.4f}")
-
-# Step 5: Optional full classification report
-print("\n🔍 Full Classification Report:")
-print(classification_report(y_true, y_pred, labels=labels, zero_division=0))
+# Apply threshold
+threshold = 0.8
+pred_label = 'card_decline_problem' if probs[0][card_idx] > threshold else 'other'
