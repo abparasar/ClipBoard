@@ -1,124 +1,31 @@
-import pandas as pd
-import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.utils.class_weight import compute_class_weight
-from sklearn.metrics import classification_report, f1_score
-import torch
-from torch.utils.data import Dataset, DataLoader
-from transformers import BertTokenizer, BertForSequenceClassification, AdamW, get_scheduler
-from tqdm import tqdm
 
-# Parameters
-TARGET_CLASS = 'card_decline_problem'
-MAX_LEN = 128
-BATCH_SIZE = 16
-EPOCHS = 4
-LEARNING_RATE = 2e-5
+# Identify rare classes (1 sample only)
+label_counts = df['label'].value_counts()
+rare_classes = label_counts[label_counts == 1].index.tolist()
 
-# Load your dataset
-df = pd.read_csv('your_intents_dataset.csv')  # Replace with your actual file
-assert 'text' in df.columns and 'label' in df.columns
+# Put all rare samples in training set
+df_rare = df[df['label'].isin(rare_classes)]
+df_common = df[~df['label'].isin(rare_classes)]
 
-# Encode labels
-le = LabelEncoder()
-df['label_id'] = le.fit_transform(df['label'])
-
-target_class_id = le.transform([TARGET_CLASS])[0]
-
-# Check class distribution
-class_counts = df['label_id'].value_counts()
-print("Class distribution:\n", class_counts.head(10))
-
-# Compute class weights
-class_weights = compute_class_weight(class_weight='balanced', classes=np.unique(df['label_id']), y=df['label_id'])
-class_weights_tensor = torch.tensor(class_weights, dtype=torch.float)
-
-# Split
-train_texts, val_texts, train_labels, val_labels = train_test_split(
-    df['text'].tolist(), df['label_id'].tolist(), test_size=0.1, stratify=df['label_id'], random_state=42
+# Encode after splitting
+train_texts_common, val_texts_common, train_labels_common, val_labels_common = train_test_split(
+    df_common['text'], df_common['label'], test_size=0.1, random_state=42, stratify=df_common['label']
 )
 
-# Tokenization
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+# Combine rare class samples with train split
+train_texts = pd.concat([train_texts_common, df_rare['text']], ignore_index=True)
+train_labels = pd.concat([train_labels_common, df_rare['label']], ignore_index=True)
 
-def tokenize(texts):
-    return tokenizer(texts, padding='max_length', truncation=True, max_length=MAX_LEN, return_tensors='pt')
+val_texts = val_texts_common
+val_labels = val_labels_common
 
-class IntentDataset(Dataset):
-    def __init__(self, texts, labels):
-        self.encodings = tokenizer(texts, truncation=True, padding='max_length', max_length=MAX_LEN)
-        self.labels = labels
+# Now re-encode labels
+le = LabelEncoder()
+all_labels = pd.concat([train_labels, val_labels])
+le.fit(all_labels)
+train_labels = le.transform(train_labels)
+val_labels = le.transform(val_labels)
 
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        return {
-            'input_ids': torch.tensor(self.encodings['input_ids'][idx]),
-            'attention_mask': torch.tensor(self.encodings['attention_mask'][idx]),
-            'labels': torch.tensor(self.labels[idx])
-        }
-
-train_dataset = IntentDataset(train_texts, train_labels)
-val_dataset = IntentDataset(val_texts, val_labels)
-
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
-
-# Model
-model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(le.classes_))
-model.cuda()
-
-# Optimizer & Scheduler
-optimizer = AdamW(model.parameters(), lr=LEARNING_RATE)
-num_training_steps = len(train_loader) * EPOCHS
-lr_scheduler = get_scheduler("linear", optimizer=optimizer, num_warmup_steps=0, num_training_steps=num_training_steps)
-
-# Loss with class weights
-loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights_tensor.cuda())
-
-# Training loop
-best_f1 = 0
-for epoch in range(EPOCHS):
-    model.train()
-    loop = tqdm(train_loader, desc=f"Training Epoch {epoch+1}")
-    for batch in loop:
-        input_ids = batch['input_ids'].cuda()
-        attention_mask = batch['attention_mask'].cuda()
-        labels = batch['labels'].cuda()
-
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        logits = outputs.logits
-        loss = loss_fn(logits, labels)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        lr_scheduler.step()
-        loop.set_postfix(loss=loss.item())
-
-    # Evaluation
-    model.eval()
-    all_preds = []
-    all_labels = []
-    with torch.no_grad():
-        for batch in val_loader:
-            input_ids = batch['input_ids'].cuda()
-            attention_mask = batch['attention_mask'].cuda()
-            labels = batch['labels'].cuda()
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            preds = torch.argmax(outputs.logits, dim=-1)
-            all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(labels.cpu().numpy())
-
-    # Evaluation metrics
-    report = classification_report(all_labels, all_preds, target_names=le.classes_, output_dict=True)
-    card_decline_f1 = report[TARGET_CLASS]['f1-score']
-    macro_f1 = f1_score(all_labels, all_preds, average='macro')
-
-    print(f"Macro F1: {macro_f1:.4f} | '{TARGET_CLASS}' F1: {card_decline_f1:.4f}")
-    if card_decline_f1 > best_f1:
-        best_f1 = card_decline_f1
-        torch.save(model.state_dict(), 'best_model_card_decline.pt')
-        print("Saved new best model!")
+# Save target class index for monitoring later
+target_class_id = le.transform(['card_decline_problem'])[0]
