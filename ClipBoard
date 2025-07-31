@@ -1,13 +1,72 @@
-from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-# All possible class IDs
+# Reload the best model
+model.load_state_dict(torch.load('best_model_card_decline.pt'))
+model.eval()
+
+# Evaluate on validation set
+all_preds = []
+all_labels = []
+
+with torch.no_grad():
+    for batch in val_loader:
+        input_ids = batch['input_ids'].cuda()
+        attention_mask = batch['attention_mask'].cuda()
+        labels = batch['labels'].cuda()
+
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        preds = torch.argmax(outputs.logits, dim=-1)
+
+        all_preds.extend(preds.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
+
+# Basic scores
+acc = accuracy_score(all_labels, all_preds)
+macro_f1 = f1_score(all_labels, all_preds, average='macro')
+micro_f1 = f1_score(all_labels, all_preds, average='micro')
+
+print(f"\n🏁 Final Evaluation Results:")
+print(f"Accuracy     : {acc:.4f}")
+print(f"Macro F1     : {macro_f1:.4f}")
+print(f"Micro F1     : {micro_f1:.4f}")
+
+# Classification report for all classes
 all_class_ids = list(range(len(le.classes_)))
 
 report = classification_report(
     y_true=all_labels,
     y_pred=all_preds,
-    labels=all_class_ids,                # ← Ensures all classes are expected
-    target_names=le.classes_,            # ← Matches label IDs
-    zero_division=0,                     # ← Avoid divide-by-zero warnings
+    labels=all_class_ids,
+    target_names=le.classes_,
+    zero_division=0
+)
+print("\n📊 Full Classification Report:")
+print(report)
+
+# Focus on specific class: 'card_decline_problem'
+target_class_id = le.transform(['card_decline_problem'])[0]
+report_dict = classification_report(
+    all_labels,
+    all_preds,
+    labels=all_class_ids,
+    target_names=le.classes_,
+    zero_division=0,
     output_dict=True
 )
+card_f1 = report_dict['card_decline_problem']['f1-score']
+print(f"\n🎯 'card_decline_problem' F1 score: {card_f1:.4f}")
+
+# Optional: Confusion matrix for top-10 classes (optional)
+top_classes = df['label'].value_counts().head(10).index.tolist()
+top_ids = le.transform(top_classes)
+
+cm = confusion_matrix(all_labels, all_preds, labels=top_ids)
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=True, fmt='d', xticklabels=top_classes, yticklabels=top_classes, cmap="Blues")
+plt.title("Confusion Matrix - Top 10 Classes")
+plt.xlabel("Predicted")
+plt.ylabel("True")
+plt.tight_layout()
+plt.show()
