@@ -1,72 +1,53 @@
-from sklearn.metrics import accuracy_score, f1_score, classification_report, confusion_matrix
-import seaborn as sns
-import matplotlib.pyplot as plt
+import pandas as pd
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
 
-# Reload the best model
-model.load_state_dict(torch.load('best_model_card_decline.pt'))
+# Constants
+MODEL_PATH = 'best_model_card_decline.pt'
+EXCEL_FILE = 'new_intents.xlsx'
+SHEET_NAME = 'x'
+MAX_LEN = 128
+
+# 1. Load Excel Data
+df_new = pd.read_excel(EXCEL_FILE, sheet_name=SHEET_NAME)
+assert 'text' in df_new.columns, "Input Excel must have a 'text' column."
+texts = df_new['text'].astype(str).fillna('').tolist()
+
+# 2. Load tokenizer and model
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
+# You need to reinitialize the model with correct num_labels
+# Load label encoder (from training time)
+import pickle
+with open('label_encoder.pkl', 'rb') as f:
+    le = pickle.load(f)
+
+num_labels = len(le.classes_)
+model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=num_labels)
+model.load_state_dict(torch.load(MODEL_PATH))
 model.eval()
+model.cuda()
 
-# Evaluate on validation set
-all_preds = []
-all_labels = []
+# 3. Predict without batching
+predictions = []
+probs = []
 
-with torch.no_grad():
-    for batch in val_loader:
-        input_ids = batch['input_ids'].cuda()
-        attention_mask = batch['attention_mask'].cuda()
-        labels = batch['labels'].cuda()
+for text in texts:
+    inputs = tokenizer(text, return_tensors='pt', truncation=True, padding='max_length', max_length=MAX_LEN)
+    inputs = {k: v.cuda() for k, v in inputs.items()}
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        pred_id = torch.argmax(logits, dim=1).item()
+        prob = torch.softmax(logits, dim=1)[0][pred_id].item()
+        predictions.append(le.inverse_transform([pred_id])[0])
+        probs.append(prob)
 
-        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-        preds = torch.argmax(outputs.logits, dim=-1)
+# 4. Add predictions to DataFrame
+df_new['predicted_intent'] = predictions
+df_new['confidence'] = probs
 
-        all_preds.extend(preds.cpu().numpy())
-        all_labels.extend(labels.cpu().numpy())
+# 5. Save to new file
+df_new.to_excel('scored_intents.xlsx', index=False)
 
-# Basic scores
-acc = accuracy_score(all_labels, all_preds)
-macro_f1 = f1_score(all_labels, all_preds, average='macro')
-micro_f1 = f1_score(all_labels, all_preds, average='micro')
-
-print(f"\n🏁 Final Evaluation Results:")
-print(f"Accuracy     : {acc:.4f}")
-print(f"Macro F1     : {macro_f1:.4f}")
-print(f"Micro F1     : {micro_f1:.4f}")
-
-# Classification report for all classes
-all_class_ids = list(range(len(le.classes_)))
-
-report = classification_report(
-    y_true=all_labels,
-    y_pred=all_preds,
-    labels=all_class_ids,
-    target_names=le.classes_,
-    zero_division=0
-)
-print("\n📊 Full Classification Report:")
-print(report)
-
-# Focus on specific class: 'card_decline_problem'
-target_class_id = le.transform(['card_decline_problem'])[0]
-report_dict = classification_report(
-    all_labels,
-    all_preds,
-    labels=all_class_ids,
-    target_names=le.classes_,
-    zero_division=0,
-    output_dict=True
-)
-card_f1 = report_dict['card_decline_problem']['f1-score']
-print(f"\n🎯 'card_decline_problem' F1 score: {card_f1:.4f}")
-
-# Optional: Confusion matrix for top-10 classes (optional)
-top_classes = df['label'].value_counts().head(10).index.tolist()
-top_ids = le.transform(top_classes)
-
-cm = confusion_matrix(all_labels, all_preds, labels=top_ids)
-plt.figure(figsize=(10, 8))
-sns.heatmap(cm, annot=True, fmt='d', xticklabels=top_classes, yticklabels=top_classes, cmap="Blues")
-plt.title("Confusion Matrix - Top 10 Classes")
-plt.xlabel("Predicted")
-plt.ylabel("True")
-plt.tight_layout()
-plt.show()
+print("✅ Predictions saved to 'scored_intents.xlsx'")
