@@ -1,4 +1,4 @@
-import pycld3
+import langid
 import pandas as pd
 
 # Sample data
@@ -14,22 +14,17 @@ df = pd.DataFrame({
     ]
 })
 
-# Function to detect English
+# Function to check if English
 def is_english(text):
-    try:
-        result = pycld3.get_language(text)
-        return result.language == 'en' and result.probability > 0.85
-    except:
-        return False
+    lang, _ = langid.classify(text)
+    return lang == 'en'
 
-# Apply detection
+# Apply and filter
 df['is_english'] = df['utterance'].apply(is_english)
-
-# Split
 df_english = df[df['is_english']].reset_index(drop=True)
 df_non_english = df[~df['is_english']].reset_index(drop=True)
 
-# Print result
+# Result
 print("✅ English utterances:")
 print(df_english)
 
