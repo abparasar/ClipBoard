@@ -1,38 +1,13 @@
-import fasttext
-import pandas as pd
+import spacy
+from spacy_langdetect import LanguageDetector
+from spacy.language import Language
 
-# Load FastText pretrained model
-model = fasttext.load_model("lid.176.bin")
+@Language.factory("language_detector")
+def get_lang_detector(nlp, name):
+    return LanguageDetector()
 
-# Sample DataFrame
-df = pd.DataFrame({
-    'utterance': [
-        "Hello, how are you?",
-        "नमस्ते, आप कैसे हैं?",
-        "Bonjour, comment ça va ?",
-        "fax a complaint",
-        "你叫什么名字？",
-        "oye",
-        "haan bolo",
-        "What is your name?"
-    ]
-})
+nlp = spacy.load("en_core_web_sm")
+nlp.add_pipe("language_detector", last=True)
 
-# Function to check if language is English
 def is_english(text):
-    try:
-        lang = model.predict(text.strip().replace('\n', ''))[0][0]
-        return lang == '__label__en'
-    except:
-        return False
-
-# Filter
-df_english = df[df['utterance'].apply(is_english)].reset_index(drop=True)
-df_non_english = df[~df['utterance'].apply(is_english)].reset_index(drop=True)
-
-# Result
-print("✅ English utterances:")
-print(df_english)
-
-print("\n🚫 Non-English utterances:")
-print(df_non_english)
+    return nlp(text)._.language['language'] == 'en'
