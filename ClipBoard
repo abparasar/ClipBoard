@@ -1,7 +1,7 @@
 from langdetect import detect, DetectorFactory
 import pandas as pd
 
-# Ensure consistent results
+# Ensure consistent language detection
 DetectorFactory.seed = 0
 
 # Sample DataFrame
@@ -15,14 +15,20 @@ df = pd.DataFrame({
     ]
 })
 
-# Function to detect language
+# Function to detect if text is English
 def is_english(text):
     try:
         return detect(text) == 'en'
     except:
-        return False  # If detection fails, treat as non-English
+        return False  # On detection error, treat as non-English
 
-# Filter only English utterances
+# Create English and non-English DataFrames
 df_english = df[df['utterance'].apply(is_english)].reset_index(drop=True)
+df_non_english = df[~df['utterance'].apply(is_english)].reset_index(drop=True)
 
+# Show the results
+print("✅ English utterances:")
 print(df_english)
+
+print("\n🚫 Non-English utterances:")
+print(df_non_english)
