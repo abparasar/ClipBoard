@@ -1,32 +1,36 @@
-from langdetect import detect, DetectorFactory
+import fasttext
 import pandas as pd
 
-# Ensure consistent language detection
-DetectorFactory.seed = 0
+# Load FastText pretrained model
+model = fasttext.load_model("lid.176.bin")
 
 # Sample DataFrame
 df = pd.DataFrame({
     'utterance': [
-        "Hello, how are you?",           # English
-        "नमस्ते, आप कैसे हैं?",         # Hindi
-        "Bonjour, comment ça va ?",     # French
-        "What is your name?",           # English
-        "你叫什么名字？",                # Chinese
+        "Hello, how are you?",
+        "नमस्ते, आप कैसे हैं?",
+        "Bonjour, comment ça va ?",
+        "fax a complaint",
+        "你叫什么名字？",
+        "oye",
+        "haan bolo",
+        "What is your name?"
     ]
 })
 
-# Function to detect if text is English
+# Function to check if language is English
 def is_english(text):
     try:
-        return detect(text) == 'en'
+        lang = model.predict(text.strip().replace('\n', ''))[0][0]
+        return lang == '__label__en'
     except:
-        return False  # On detection error, treat as non-English
+        return False
 
-# Create English and non-English DataFrames
+# Filter
 df_english = df[df['utterance'].apply(is_english)].reset_index(drop=True)
 df_non_english = df[~df['utterance'].apply(is_english)].reset_index(drop=True)
 
-# Show the results
+# Result
 print("✅ English utterances:")
 print(df_english)
 
