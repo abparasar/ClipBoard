@@ -1,32 +1,11 @@
-import langid
-import pandas as pd
 
-# Sample data
-df = pd.DataFrame({
-    'utterance': [
-        "hello",
-        "oye",
-        "cómo estás",
-        "haan theek hai",
-        "fax a complaint",
-        "bonjour",
-        "what's your name?",
-    ]
-})
+import numpy as np
+from kneed import KneeLocator
 
-# Function to check if English
-def is_english(text):
-    lang, _ = langid.classify(text)
-    return lang == 'en'
+scores = sorted(df['similarity_score'].tolist())
+x = list(range(len(scores)))
 
-# Apply and filter
-df['is_english'] = df['utterance'].apply(is_english)
-df_english = df[df['is_english']].reset_index(drop=True)
-df_non_english = df[~df['is_english']].reset_index(drop=True)
+knee = KneeLocator(x, scores, curve="convex", direction="increasing")
+cutoff = scores[knee.knee]
 
-# Result
-print("✅ English utterances:")
-print(df_english)
-
-print("\n🚫 Non-English utterances:")
-print(df_non_english)
+print(f"Detected cutoff: {cutoff}")
