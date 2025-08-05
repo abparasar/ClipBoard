@@ -1,52 +1,28 @@
-from transformers import BartTokenizer, BartForConditionalGeneration, Seq2SeqTrainer
-from datasets import Dataset
-import torch
+from langdetect import detect, DetectorFactory
+import pandas as pd
 
-# Load tokenizer and model from saved directory
-model_dir = "./path_to_your_saved_model"  # Change this to your model save path
-tokenizer = BartTokenizer.from_pretrained(model_dir)
-model = BartForConditionalGeneration.from_pretrained(model_dir)
+# Ensure consistent results
+DetectorFactory.seed = 0
 
-# Load tokenized validation dataset (tokenized_valid should be of type Dataset or DatasetDict)
-# If not already loaded:
-# from datasets import load_from_disk
-# tokenized_valid = load_from_disk("./path_to_tokenized_valid_dataset")
+# Sample DataFrame
+df = pd.DataFrame({
+    'utterance': [
+        "Hello, how are you?",           # English
+        "नमस्ते, आप कैसे हैं?",         # Hindi
+        "Bonjour, comment ça va ?",     # French
+        "What is your name?",           # English
+        "你叫什么名字？",                # Chinese
+    ]
+})
 
-# Define your compute_metrics function (you should already have this)
-def compute_metrics(eval_preds):
-    from datasets import load_metric
-    metric = load_metric("rouge")  # or your custom metric
+# Function to detect language
+def is_english(text):
+    try:
+        return detect(text) == 'en'
+    except:
+        return False  # If detection fails, treat as non-English
 
-    preds, labels = eval_preds
-    decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-    
-    result = metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
-    return {k: v.mid.fmeasure for k, v in result.items()}
+# Filter only English utterances
+df_english = df[df['utterance'].apply(is_english)].reset_index(drop=True)
 
-# Prepare evaluation arguments
-from transformers import Seq2SeqTrainingArguments
-
-eval_args = Seq2SeqTrainingArguments(
-    output_dir="./eval_results",
-    per_device_eval_batch_size=8,
-    predict_with_generate=True,
-    generation_max_length=128,
-    do_train=False,
-    do_eval=True,
-    logging_dir='./logs',
-)
-
-# Initialize trainer for evaluation
-trainer = Seq2SeqTrainer(
-    model=model,
-    tokenizer=tokenizer,
-    args=eval_args,
-    compute_metrics=compute_metrics,
-)
-
-# Evaluate on the validation set
-eval_results = trainer.evaluate(eval_dataset=tokenized_valid)
-
-print("Evaluation results on validation set:")
-print(eval_results)
+print(df_english)
