@@ -1,11 +1,54 @@
+import pandas as pd
+import re
 
-import numpy as np
-from kneed import KneeLocator
+# Sample data
+df = pd.DataFrame({
+    'conversation': [
+        "#Person1# Hello, I need help with my account. #Person2# Sure, I can help. What's the issue? #Person1# I'm not able to login.",
+        "#Person2# Hi, my internet is not working. #Person1# Okay, let me check. #Person2# It's been down since morning.",
+        "#Person1# Hello #Person2# Hi there! How can I help you? #Person1# I lost my card. Can you block it?",
+    ]
+})
 
-scores = sorted(df['similarity_score'].tolist())
-x = list(range(len(scores)))
+# Define keywords that indicate likely client statements
+client_keywords = [
+    "i need", "my account", "can't", "cannot", "i am", "i'm", "lost", "problem", "issue", 
+    "help", "internet", "not working", "blocked", "declined", "error", "charged", "payment", "refund"
+]
 
-knee = KneeLocator(x, scores, curve="convex", direction="increasing")
-cutoff = scores[knee.knee]
+def infer_client_role(dialogue):
+    # Count keyword hits for each speaker
+    speaker_counts = {"#Person1#": 0, "#Person2#": 0}
+    
+    # Split into chunks
+    parts = re.split(r"(#Person\d+#)", dialogue)
+    dialogue_parts = [(parts[i], parts[i+1].strip().lower()) for i in range(1, len(parts)-1, 2)]
+    
+    for speaker, text in dialogue_parts:
+        if speaker in speaker_counts:
+            for keyword in client_keywords:
+                if keyword in text:
+                    speaker_counts[speaker] += 1
+                    
+    # Decide client based on more keyword matches
+    if speaker_counts["#Person1#"] > speaker_counts["#Person2#"]:
+        return "Person1"
+    elif speaker_counts["#Person2#"] > speaker_counts["#Person1#"]:
+        return "Person2"
+    else:
+        return "Unknown"
 
-print(f"Detected cutoff: {cutoff}")
+def extract_client_monologue(conversation):
+    client = infer_client_role(conversation)
+    if client == "Unknown":
+        return ""  # or return full conversation if unsure
+    parts = re.split(r"(#Person\d+#)", conversation)
+    dialogue = [(parts[i], parts[i+1].strip()) for i in range(1, len(parts)-1, 2)]
+    return " ".join(text for speaker, text in dialogue if speaker == f"#{client}#")
+
+# Apply
+df['client'] = df['conversation'].apply(infer_client_role)
+df['client_monologue'] = df['conversation'].apply(extract_client_monologue)
+
+# Show result
+import caas_jupyter_tools as tools; tools.display_dataframe_to_user(name="Client Monologue Extraction", dataframe=df)
