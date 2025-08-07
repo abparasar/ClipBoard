@@ -1,58 +1,7 @@
-import pandas as pd
-import re
+sentence = "I need help with my account."
+substring_list = ["lost", "refund", "need help", "card"]
 
-# Sample data
-df = pd.DataFrame({
-    'conversation': [
-        "#Person1# Hello, I need help with my account. #Person2# Sure, I can help. What's the issue? #Person1# I'm not able to login.",
-        "#Person2# Hi, my internet is not working. #Person1# Okay, let me check. #Person2# It's been down since morning.",
-        "#Person1# Hello #Person2# Hi there! How can I help you? #Person1# I lost my card. Can you block it?",
-        "#Person1# Hello. #Person2# Hello, welcome to support. #Person1# Thanks. #Person2# How can I help you today?",
-    ]
-})
+# Case-insensitive check
+found = any(sub in sentence.lower() for sub in substring_list)
 
-# Keyword lists
-client_keywords = [
-    "i need", "my account", "can't", "cannot", "i am", "i'm", "lost", "problem", "issue",
-    "help", "internet", "not working", "declined", "error", "charged", "payment", "refund",
-    "login", "block", "card", "transaction"
-]
-
-agent_keywords = [
-    "let me", "can you please", "i can help", "i will check", "give me a moment", 
-    "welcome", "support", "help you", "how can i", "sure", "checking", "assist", "okay"
-]
-
-def extract_person_lines(convo, tag):
-    """Extracts all monologues by a given person tag (#Person1# or #Person2#)."""
-    parts = re.split(r"(#Person\d+#)", convo)
-    dialogue = [(parts[i], parts[i+1].strip().lower()) for i in range(1, len(parts)-1, 2)]
-    return " ".join(text for speaker, text in dialogue if speaker == tag)
-
-def count_keyword_hits(text, keywords):
-    return sum(1 for kw in keywords if kw in text)
-
-def infer_client_role_via_keywords(p1_text, p2_text):
-    p1_client_score = count_keyword_hits(p1_text, client_keywords)
-    p2_client_score = count_keyword_hits(p2_text, client_keywords)
-
-    p1_agent_score = count_keyword_hits(p1_text, agent_keywords)
-    p2_agent_score = count_keyword_hits(p2_text, agent_keywords)
-
-    # Heuristic rules
-    if (p1_client_score > p2_client_score) and (p2_agent_score > p1_agent_score):
-        return "Person1"
-    elif (p2_client_score > p1_client_score) and (p1_agent_score > p2_agent_score):
-        return "Person2"
-    elif (p1_client_score > 0 or p2_client_score > 0):
-        return "Person1" if p1_client_score >= p2_client_score else "Person2"
-    else:
-        return "Unknown"
-
-# Apply extraction and inference
-df['person1_text'] = df['conversation'].apply(lambda x: extract_person_lines(x, "#Person1#"))
-df['person2_text'] = df['conversation'].apply(lambda x: extract_person_lines(x, "#Person2#"))
-df['client'] = df.apply(lambda row: infer_client_role_via_keywords(row['person1_text'], row['person2_text']), axis=1)
-
-# Show result
-import caas_jupyter_tools as tools; tools.display_dataframe_to_user(name="Client Role Identification", dataframe=df)
+print("Found match?" , found)
