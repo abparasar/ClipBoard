@@ -1,7 +1,25 @@
-sentence = "I need help with my account."
-substring_list = ["lost", "refund", "need help", "card"]
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+import torch.nn.functional as F
 
-# Case-insensitive check
-found = any(sub in sentence.lower() for sub in substring_list)
+# Load model and tokenizer
+model_name = "distilbert-base-uncased-finetuned-sst-2-english"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSequenceClassification.from_pretrained(model_name)
 
-print("Found match?" , found)
+# Encode text
+inputs = tokenizer("I love using transformers!", return_tensors="pt")
+
+# Get raw logits
+with torch.no_grad():
+    outputs = model(**inputs)
+    logits = outputs.logits
+
+# Convert logits to probabilities
+probs = F.softmax(logits, dim=-1)
+score, label_id = torch.max(probs, dim=1)
+
+# Get label string
+label = model.config.id2label[label_id.item()]
+
+print(f"Label: {label}, Score: {score.item():.4f}")
