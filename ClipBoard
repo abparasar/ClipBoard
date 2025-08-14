@@ -4,31 +4,49 @@
 \hline
 \textbf{Column 1} & \textbf{Column 2} & \textbf{Column 3 (subcells)} & \textbf{Column 4 (subcells)} \\
 \hline
-Row 1 Col 1 & Row 1 Col 2 & 
-\begin{tabular}{ccc}
-A1 & B1 & C1
+Row 1 Col 1 & Row 1 Col 2 &
+\begin{tabular}{|c|}
+\hline
+A1 \\ \hline
+B1 \\ \hline
+C1 \\ \hline
 \end{tabular} &
-\begin{tabular}{ccc}
-D1 & E1 & F1
+\begin{tabular}{|c|}
+\hline
+D1 \\ \hline
+E1 \\ \hline
+F1 \\ \hline
 \end{tabular} \\
 \hline
-Row 2 Col 1 & Row 2 Col 2 & 
-\begin{tabular}{ccc}
-A2 & B2 & C2
+Row 2 Col 1 & Row 2 Col 2 &
+\begin{tabular}{|c|}
+\hline
+A2 \\ \hline
+B2 \\ \hline
+C2 \\ \hline
 \end{tabular} &
-\begin{tabular}{ccc}
-D2 & E2 & F2
+\begin{tabular}{|c|}
+\hline
+D2 \\ \hline
+E2 \\ \hline
+F2 \\ \hline
 \end{tabular} \\
 \hline
-Row 3 Col 1 & Row 3 Col 2 & 
-\begin{tabular}{ccc}
-A3 & B3 & C3
+Row 3 Col 1 & Row 3 Col 2 &
+\begin{tabular}{|c|}
+\hline
+A3 \\ \hline
+B3 \\ \hline
+C3 \\ \hline
 \end{tabular} &
-\begin{tabular}{ccc}
-D3 & E3 & F3
+\begin{tabular}{|c|}
+\hline
+D3 \\ \hline
+E3 \\ \hline
+F3 \\ \hline
 \end{tabular} \\
 \hline
 \end{tabular}
-\caption{Table with Columns 3 and 4 containing three subcells each}
-\label{tab:four_column_subcells}
+\caption{Table with vertically stacked subcells in Columns 3 and 4}
+\label{tab:vertical_subcells}
 \end{table}
