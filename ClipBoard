@@ -1,17 +1,19 @@
+\usepackage{array} % In preamble
+
 \begin{table}[h]
 \centering
-\begin{tabular}{|l|c|c|c|}
+\begin{tabular}{l c p{3cm} p{3cm}} % fixed outer widths
 \hline
 \textbf{Column 1} & \textbf{Column 2} & \textbf{Column 3 (subcells)} & \textbf{Column 4 (subcells)} \\
 \hline
 Row 1 Col 1 & Row 1 Col 2 &
-\begin{tabular}{|c|}
+\begin{tabular}{|p{\linewidth}|}
 \hline
 A1 \\ \hline
 B1 \\ \hline
 C1 \\ \hline
 \end{tabular} &
-\begin{tabular}{|c|}
+\begin{tabular}{|p{\linewidth}|}
 \hline
 D1 \\ \hline
 E1 \\ \hline
@@ -19,13 +21,13 @@ F1 \\ \hline
 \end{tabular} \\
 \hline
 Row 2 Col 1 & Row 2 Col 2 &
-\begin{tabular}{|c|}
+\begin{tabular}{|p{\linewidth}|}
 \hline
 A2 \\ \hline
 B2 \\ \hline
 C2 \\ \hline
 \end{tabular} &
-\begin{tabular}{|c|}
+\begin{tabular}{|p{\linewidth}|}
 \hline
 D2 \\ \hline
 E2 \\ \hline
@@ -33,13 +35,13 @@ F2 \\ \hline
 \end{tabular} \\
 \hline
 Row 3 Col 1 & Row 3 Col 2 &
-\begin{tabular}{|c|}
+\begin{tabular}{|p{\linewidth}|}
 \hline
 A3 \\ \hline
 B3 \\ \hline
 C3 \\ \hline
 \end{tabular} &
-\begin{tabular}{|c|}
+\begin{tabular}{|p{\linewidth}|}
 \hline
 D3 \\ \hline
 E3 \\ \hline
@@ -47,6 +49,6 @@ F3 \\ \hline
 \end{tabular} \\
 \hline
 \end{tabular}
-\caption{Table with vertically stacked subcells in Columns 3 and 4}
-\label{tab:vertical_subcells}
+\caption{Fixed-width outer columns with contained subcells}
+\label{tab:fixed_subcells_contained}
 \end{table}
