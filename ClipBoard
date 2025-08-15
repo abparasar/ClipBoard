@@ -81,3 +81,23 @@ multi_intent_df = df[df["all_intents"].apply(len) > 1]
 
 print("Multi-intent calls:")
 print(multi_intent_df[["call", "all_intents"]])
+
+
+
+def detect_intents(text):
+    result = classifier(text, natural_labels, multi_label=False)  # single-label mode
+    
+    # Take top predicted label
+    top_label = result["labels"][0]
+    
+    # Map back to original ID
+    matched_id = [orig for orig, natural in intent_map.items() if natural == top_label][0]
+    return matched_id
+
+
+
+
+df["utterance_intents"] = df["utterances"].apply(
+    lambda utt_list: [detect_intents(utt.strip()) for utt in utt_list]
+)
+
