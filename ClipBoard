@@ -13,55 +13,69 @@ df = pd.DataFrame({
 })
 
 # -----------------------------
-# 2. Possible Intent Labels
+# 2. Original Intent IDs
 # -----------------------------
-intent_labels = [
-    "check balance",
-    "transfer money",
-    "reset password",
-    "complaint",
-    "greeting",
-    "close account"
+original_intents = [
+    "CHECK_BALANCE",
+    "TRANSFER_MONEY",
+    "RESET_PASSWORD",
+    "COMPLAINT",
+    "GREETING",
+    "CLOSE_ACCOUNT"
 ]
 
 # -----------------------------
-# 3. Zero-Shot Classifier
+# 3. Create Mapping to Natural Language
+# -----------------------------
+intent_map = {orig: orig.lower().replace("_", " ") for orig in original_intents}
+natural_labels = list(intent_map.values())
+
+# -----------------------------
+# 4. Zero-Shot Classifier
 # -----------------------------
 classifier = pipeline(
     "zero-shot-classification",
     model="facebook/bart-large-mnli",
-    device=-1  # set to 0 if GPU available
+    device=-1  # change to 0 for GPU
 )
 
 # -----------------------------
-# 4. Split into Utterances
+# 5. Split Dialogues into Utterances
 # -----------------------------
 df["utterances"] = df["dialogue"].str.split("#utterance#")
 
 # -----------------------------
-# 5. Detect Intents per Utterance
+# 6. Detect Intents per Utterance
 # -----------------------------
 def detect_intents(text):
-    result = classifier(text, intent_labels, multi_label=True)
-    return [
+    result = classifier(text, natural_labels, multi_label=True)
+    
+    # Keep intents above threshold
+    matched_natural = [
         label for label, score in zip(result["labels"], result["scores"])
-        if score > 0.5  # threshold for "present" intent
+        if score > 0.5
     ]
+    
+    # Map back to original IDs
+    matched_ids = [
+        orig for orig, natural in intent_map.items()
+        if natural in matched_natural
+    ]
+    return matched_ids
 
-# Store predicted intents per utterance
 df["utterance_intents"] = df["utterances"].apply(
     lambda utt_list: [detect_intents(utt.strip()) for utt in utt_list]
 )
 
 # -----------------------------
-# 6. Aggregate Intents per Call
+# 7. Aggregate Intents per Call
 # -----------------------------
 df["all_intents"] = df["utterance_intents"].apply(
     lambda intents_list: set([intent for sublist in intents_list for intent in sublist])
 )
 
 # -----------------------------
-# 7. Filter Multi-Intent Calls
+# 8. Filter Multi-Intent Calls
 # -----------------------------
 multi_intent_df = df[df["all_intents"].apply(len) > 1]
 
