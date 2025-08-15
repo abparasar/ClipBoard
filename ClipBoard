@@ -1,22 +1,20 @@
-from transformers import pipeline
 import pandas as pd
+from transformers import pipeline
 
 # -----------------------------
 # 1. Example Data
 # -----------------------------
-# Your dataframe should have: dialogue_id, speaker, text
-df = pd.DataFrame([
-    {"dialogue_id": 1, "speaker": "client", "text": "Hi, I want to check my balance."},
-    {"dialogue_id": 1, "speaker": "agent", "text": "Sure, anything else?"},
-    {"dialogue_id": 1, "speaker": "client", "text": "Yes, I also want to reset my password."},
-    {"dialogue_id": 2, "speaker": "client", "text": "I need help transferring money."},
-    {"dialogue_id": 2, "speaker": "agent", "text": "Sure, what’s the account number?"}
-])
+df = pd.DataFrame({
+    "call": [1, 2],
+    "dialogue": [
+        "Hi#utterance#I want to check my balance#utterance#And reset my password",
+        "Hello#utterance#Transfer money to my account"
+    ]
+})
 
 # -----------------------------
-# 2. Define Intent Labels
+# 2. Possible Intent Labels
 # -----------------------------
-# These are your possible intents (can be domain-specific)
 intent_labels = [
     "check balance",
     "transfer money",
@@ -27,43 +25,45 @@ intent_labels = [
 ]
 
 # -----------------------------
-# 3. Load Zero-Shot Classifier
+# 3. Zero-Shot Classifier
 # -----------------------------
 classifier = pipeline(
     "zero-shot-classification",
     model="facebook/bart-large-mnli",
-    device=-1  # change to 0 if you have GPU
+    device=-1  # set to 0 if GPU available
 )
 
 # -----------------------------
-# 4. Detect Intents per Utterance
+# 4. Split into Utterances
+# -----------------------------
+df["utterances"] = df["dialogue"].str.split("#utterance#")
+
+# -----------------------------
+# 5. Detect Intents per Utterance
 # -----------------------------
 def detect_intents(text):
     result = classifier(text, intent_labels, multi_label=True)
-    intents = [
+    return [
         label for label, score in zip(result["labels"], result["scores"])
-        if score > 0.5  # threshold for considering an intent present
+        if score > 0.5  # threshold for "present" intent
     ]
-    return intents
 
-df["predicted_intents"] = df["text"].apply(detect_intents)
-
-# -----------------------------
-# 5. Aggregate at Dialogue Level
-# -----------------------------
-dialogue_intents = (
-    df.groupby("dialogue_id")["predicted_intents"]
-      .apply(lambda lists: set([intent for sublist in lists for intent in sublist]))
-      .reset_index()
+# Store predicted intents per utterance
+df["utterance_intents"] = df["utterances"].apply(
+    lambda utt_list: [detect_intents(utt.strip()) for utt in utt_list]
 )
 
 # -----------------------------
-# 6. Filter Multi-Intent Dialogues
+# 6. Aggregate Intents per Call
 # -----------------------------
-multi_intent_dialogues = dialogue_intents[dialogue_intents["predicted_intents"].apply(len) > 1]
+df["all_intents"] = df["utterance_intents"].apply(
+    lambda intents_list: set([intent for sublist in intents_list for intent in sublist])
+)
 
-# Get the original utterances for those dialogues
-multi_intent_df = df[df["dialogue_id"].isin(multi_intent_dialogues["dialogue_id"])]
+# -----------------------------
+# 7. Filter Multi-Intent Calls
+# -----------------------------
+multi_intent_df = df[df["all_intents"].apply(len) > 1]
 
-print("Multi-intent dialogues:")
-print(multi_intent_df)
+print("Multi-intent calls:")
+print(multi_intent_df[["call", "all_intents"]])
