@@ -1,32 +1,32 @@
 import pandas as pd
 import os
 
-# Example function to apply
-def my_function(row):
-    # Replace with your real logic
-    return row["col1"] * 2, row["col1"] + 5
+# Example row function: takes a single value and returns 2 outputs
+def my_func(x):
+    return x * 2, x + 5
 
-# --- Step 1: Load progress if exists ---
+# --- Step 1: Load existing progress if available ---
 if os.path.exists("progress.xlsx"):
     df = pd.read_excel("progress.xlsx")
 else:
-    df = pd.DataFrame({"col1": [1,2,3,4,5]})  # <-- your starting data
+    df = pd.DataFrame({"col": [1, 2, 3, 4, 5]})  # your initial data
+    df["col1"] = None
     df["col2"] = None
-    df["col3"] = None
 
 # --- Step 2: Process in chunks ---
 chunk_size = 2  # change as needed
 
 for i in range(0, len(df), chunk_size):
-    # Only process rows that are still empty (resume capability)
-    mask = df.iloc[i:i+chunk_size]["col2"].isna()
+    # Select only rows in this chunk that are not yet processed
+    mask = df.iloc[i:i+chunk_size]["col1"].isna()
     if mask.any():
-        chunk = df.iloc[i:i+chunk_size][mask]
-        
-        # Apply function and expand results into 2 columns
-        df.loc[chunk.index, ["col2", "col3"]] = chunk.apply(
-            my_function, axis=1, result_type="expand"
-        )
+        idx = df.iloc[i:i+chunk_size][mask].index
+
+        # Apply your function on df['col']
+        results = df.loc[idx, "col"].apply(my_func).tolist()
+
+        # Unpack into col1, col2
+        df.loc[idx, ["col1", "col2"]] = results
 
         # Save checkpoint
         df.to_excel("progress.xlsx", index=False)
