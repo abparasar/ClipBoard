@@ -1,103 +1,33 @@
 import pandas as pd
-from transformers import pipeline
+import os
 
-# -----------------------------
-# 1. Example Data
-# -----------------------------
-df = pd.DataFrame({
-    "call": [1, 2],
-    "dialogue": [
-        "Hi#utterance#I want to check my balance#utterance#And reset my password",
-        "Hello#utterance#Transfer money to my account"
-    ]
-})
+# Example function to apply
+def my_function(row):
+    # Replace with your real logic
+    return row["col1"] * 2, row["col1"] + 5
 
-# -----------------------------
-# 2. Original Intent IDs
-# -----------------------------
-original_intents = [
-    "CHECK_BALANCE",
-    "TRANSFER_MONEY",
-    "RESET_PASSWORD",
-    "COMPLAINT",
-    "GREETING",
-    "CLOSE_ACCOUNT"
-]
+# --- Step 1: Load progress if exists ---
+if os.path.exists("progress.xlsx"):
+    df = pd.read_excel("progress.xlsx")
+else:
+    df = pd.DataFrame({"col1": [1,2,3,4,5]})  # <-- your starting data
+    df["col2"] = None
+    df["col3"] = None
 
-# -----------------------------
-# 3. Create Mapping to Natural Language
-# -----------------------------
-intent_map = {orig: orig.lower().replace("_", " ") for orig in original_intents}
-natural_labels = list(intent_map.values())
+# --- Step 2: Process in chunks ---
+chunk_size = 2  # change as needed
 
-# -----------------------------
-# 4. Zero-Shot Classifier
-# -----------------------------
-classifier = pipeline(
-    "zero-shot-classification",
-    model="facebook/bart-large-mnli",
-    device=-1  # change to 0 for GPU
-)
+for i in range(0, len(df), chunk_size):
+    # Only process rows that are still empty (resume capability)
+    mask = df.iloc[i:i+chunk_size]["col2"].isna()
+    if mask.any():
+        chunk = df.iloc[i:i+chunk_size][mask]
+        
+        # Apply function and expand results into 2 columns
+        df.loc[chunk.index, ["col2", "col3"]] = chunk.apply(
+            my_function, axis=1, result_type="expand"
+        )
 
-# -----------------------------
-# 5. Split Dialogues into Utterances
-# -----------------------------
-df["utterances"] = df["dialogue"].str.split("#utterance#")
-
-# -----------------------------
-# 6. Detect Intents per Utterance
-# -----------------------------
-def detect_intents(text):
-    result = classifier(text, natural_labels, multi_label=True)
-    
-    # Keep intents above threshold
-    matched_natural = [
-        label for label, score in zip(result["labels"], result["scores"])
-        if score > 0.5
-    ]
-    
-    # Map back to original IDs
-    matched_ids = [
-        orig for orig, natural in intent_map.items()
-        if natural in matched_natural
-    ]
-    return matched_ids
-
-df["utterance_intents"] = df["utterances"].apply(
-    lambda utt_list: [detect_intents(utt.strip()) for utt in utt_list]
-)
-
-# -----------------------------
-# 7. Aggregate Intents per Call
-# -----------------------------
-df["all_intents"] = df["utterance_intents"].apply(
-    lambda intents_list: set([intent for sublist in intents_list for intent in sublist])
-)
-
-# -----------------------------
-# 8. Filter Multi-Intent Calls
-# -----------------------------
-multi_intent_df = df[df["all_intents"].apply(len) > 1]
-
-print("Multi-intent calls:")
-print(multi_intent_df[["call", "all_intents"]])
-
-
-
-def detect_intents(text):
-    result = classifier(text, natural_labels, multi_label=False)  # single-label mode
-    
-    # Take top predicted label
-    top_label = result["labels"][0]
-    
-    # Map back to original ID
-    matched_id = [orig for orig, natural in intent_map.items() if natural == top_label][0]
-    return matched_id
-
-
-
-
-df["utterance_intents"] = df["utterances"].apply(
-    lambda utt_list: [detect_intents(utt.strip()) for utt in utt_list]
-)
-
+        # Save checkpoint
+        df.to_excel("progress.xlsx", index=False)
+        print(f"✅ Saved progress up to row {i+chunk_size}")
