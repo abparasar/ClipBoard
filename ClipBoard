@@ -1,1 +1,3 @@
-Because Whisper already applies internal text normalization and spelling correction during decoding, so its output is generally clean and does not require an additional spelling correction step.
+\[
+\text{BERTScore}_{\text{scaled}}(x,y) = \text{BERTScore}(x,y) - \beta
+\]
