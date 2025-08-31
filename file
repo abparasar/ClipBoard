@@ -1,5 +1,3 @@
-Decision: Escalated model from limited change to Provisional Approval (PA) instead of immediate full-scope.
-	•	Rationale:
-	•	Allowed business to deploy with monitoring given urgency.
-	•	Ensured governance by setting 6-month expiry on PA.
-	•	Required a full-scope validation (with OOT and stability checks) to be completed before PA expiration.
+	1.	Comprehensive and Narrative – Written in a clear, detailed narrative (not bullet points), explaining the model and reasoning behind design choices.
+	2.	Proportionate to Model Risk – Depth and breadth of documentation should match the model’s risk level, with the highest rigor for high-risk models.
+	3.	Consistent and Structured – Follow organizational guidelines (e.g., Risk Tiering, Modular Documentation, Quant Council Writing) to ensure clarity and standardization.
