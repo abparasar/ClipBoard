@@ -1,6 +1,5 @@
-Initial MRM Review
-	•	Scope Review: Although submitted as limited change, MRM identified that the data refresh required full model re-estimation, making it closer to a material change.
-	•	Testing Evidence:
-	•	Only holdout sample performance was shared.
-	•	No out-of-time (OOT) validation or training vs. holdout comparison provided.
-	•	Raised risk of overfitting and lack of generalizability evidence.
+Decision: Escalated model from limited change to Provisional Approval (PA) instead of immediate full-scope.
+	•	Rationale:
+	•	Allowed business to deploy with monitoring given urgency.
+	•	Ensured governance by setting 6-month expiry on PA.
+	•	Required a full-scope validation (with OOT and stability checks) to be completed before PA expiration.
