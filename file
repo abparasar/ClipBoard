@@ -1,6 +1,6 @@
-from transformers import AutoTokenizer
-
-tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large")
-
-# Filter based on tokenized length
-df = df[df["dialogue"].apply(lambda x: len(tokenizer(x, add_special_tokens=False)["input_ids"]) >= 20)]
+Initial MRM Review
+	•	Scope Review: Although submitted as limited change, MRM identified that the data refresh required full model re-estimation, making it closer to a material change.
+	•	Testing Evidence:
+	•	Only holdout sample performance was shared.
+	•	No out-of-time (OOT) validation or training vs. holdout comparison provided.
+	•	Raised risk of overfitting and lack of generalizability evidence.
