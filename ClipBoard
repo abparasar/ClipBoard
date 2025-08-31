@@ -1,3 +1,21 @@
-\[
-\text{BERTScore}_{\text{scaled}}(x,y) = \text{BERTScore}(x,y) - \beta
-\]
+Great question 👍 — you’re trying to create parallel roles for the Model Developer (MD) that mirror the responsibilities of MRM across Initial Assessment → Validation.
+
+Here’s how we can phrase it in similar lines and style:
+
+⸻
+
+Role of Model Developer
+	•	On Initial Assessment (IA) Review:
+Once IA is ready and shared by MRM, developers should review MRM’s findings, clarify model design choices, and provide supporting evidence or documentation. They should give timely feedback to help MRM refine the IA and ensure it reflects the model’s intent and design accurately.
+	•	On Concern Identification & Testing Plan Input:
+Developers should revisit the concerns highlighted in the IA and provide additional context—such as rationale for assumptions, data limitations, or adjustments already made. They should also update MRM on any new model features, new use cases, or performance challenges observed in production (e.g., from OMRs), ensuring all material updates are transparently communicated.
+	•	On Testing & Evidence Sharing:
+For each concern raised, developers should share any existing testing or analysis they have already performed (stress testing, sensitivity analysis, benchmarking, etc.). Where no prior testing exists, they should propose how concerns might be addressed or mitigated in development. This ensures MRM can distinguish between issues already resolved versus those needing independent validation.
+
+⸻
+
+👉 This way, you get mirrored roles:
+	•	MRM = assess, consolidate, test, opine
+	•	Developers = review, clarify, document, provide evidence
+
+Would you like me to also draft this in a side-by-side comparison table (MRM role vs Developer role) for clarity (could be useful in slides or documentation)?
