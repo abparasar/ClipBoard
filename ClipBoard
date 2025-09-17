@@ -1,8 +1,2 @@
-Here’s a crisp five-pointer summary of the five data analysis elements:
-	1.	Current Transaction Signals – Analyze real-time details such as amount, time, location, merchant, and device/IP to detect anomalies.
-	2.	Pivoted Historical Behavior – Distill past transactions by card and device into behavioral patterns, linking merchants, locations, and device-card relationships.
-	3.	Dynamic Self-Learning Variables – Use mini-models to track shifts in spending velocity, repeat purchases, and new device usage in real time.
-	4.	Historical Risk Tables – Leverage fraud vs. legitimate transaction trends and probabilities derived from large-scale historical data.
-	5.	Non-Linear Scoring Models – Combine all factors into advanced models that balance risky indicators with mitigating behaviors to produce a fraud risk score.
-
-Do you want me to make this summary executive-style (one line each, management-friendly) or technical-style (with PSD2 compliance emphasis)?
+All these PSD2 risk categories are addressed by the data analysis elements in one way or another.
+The mappings shown in column three represent the best probable alignment between PSD2 requirements and the five model data analysis points
