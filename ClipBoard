@@ -1,19 +1,8 @@
-\begin{table}[h!]
-\centering
-\begin{tabular}{|p{8cm}|p{6cm}|}
-\hline
-\textbf{Citable Points} & \textbf{One-Liner Summary} \\ \hline
-Point 1 text & Summary 1 \\ \hline
-Point 2 text & Summary 2 \\ \hline
-Point 3 text & Summary 3 \\ \hline
-Point 4 text & Summary 4 \\ \hline
-Point 5 text & Summary 5 \\ \hline
-\textbf{Citable Points} & \textbf{One-Liner Summary} \\ \hline
-Point 6 text & Summary 6 \\ \hline
-Point 7 text & Summary 7 \\ \hline
-Point 8 text & Summary 8 \\ \hline
-Point 9 text & Summary 9 \\ \hline
-Point 10 text & Summary 10 \\ \hline
-\end{tabular}
-\caption{Two-column table with repeated headers after 5 rows.}
-\end{table}
+Here’s a crisp five-pointer summary of the five data analysis elements:
+	1.	Current Transaction Signals – Analyze real-time details such as amount, time, location, merchant, and device/IP to detect anomalies.
+	2.	Pivoted Historical Behavior – Distill past transactions by card and device into behavioral patterns, linking merchants, locations, and device-card relationships.
+	3.	Dynamic Self-Learning Variables – Use mini-models to track shifts in spending velocity, repeat purchases, and new device usage in real time.
+	4.	Historical Risk Tables – Leverage fraud vs. legitimate transaction trends and probabilities derived from large-scale historical data.
+	5.	Non-Linear Scoring Models – Combine all factors into advanced models that balance risky indicators with mitigating behaviors to produce a fraud risk score.
+
+Do you want me to make this summary executive-style (one line each, management-friendly) or technical-style (with PSD2 compliance emphasis)?
