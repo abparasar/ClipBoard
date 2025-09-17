@@ -1,4 +1,19 @@
-import webbrowser
-
-chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe %s"
-webbrowser.get(chrome_path).open_new("https://www.python.org")
+\begin{table}[h!]
+\centering
+\begin{tabular}{|p{8cm}|p{6cm}|}
+\hline
+\textbf{Citable Points} & \textbf{One-Liner Summary} \\ \hline
+Point 1 text & Summary 1 \\ \hline
+Point 2 text & Summary 2 \\ \hline
+Point 3 text & Summary 3 \\ \hline
+Point 4 text & Summary 4 \\ \hline
+Point 5 text & Summary 5 \\ \hline
+\textbf{Citable Points} & \textbf{One-Liner Summary} \\ \hline
+Point 6 text & Summary 6 \\ \hline
+Point 7 text & Summary 7 \\ \hline
+Point 8 text & Summary 8 \\ \hline
+Point 9 text & Summary 9 \\ \hline
+Point 10 text & Summary 10 \\ \hline
+\end{tabular}
+\caption{Two-column table with repeated headers after 5 rows.}
+\end{table}
