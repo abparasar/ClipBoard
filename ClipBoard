@@ -1,216 +1,111 @@
-# Notebook cell — run fuzzy plagiarism detection across ALL PDF pages and write a highlighted PDF
-# Requirements:
-# pip install python-docx pdfplumber rapidfuzz pandas pymupdf
-
-import re
-from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-import docx
-import pdfplumber
+# Robust high-threshold fuzzy function (notebook-friendly)
 from rapidfuzz import process, fuzz
-import fitz  # PyMuPDF
-import pandas as pd
+import re
 
-SENT_END_RE = re.compile(r'([.!?]["\']?\s+)')
+def high_thresh_fuzzy_matches_safe(doc_sents, pdf_sent_objs, threshold=95.0, top_k=1, min_len=20, debug=False):
+    """
+    doc_sents: list of docx sentences (strings)
+    pdf_sent_objs: list of dicts {'page':..., 'sentence':..., ...}
+    threshold: fuzzy threshold (0-100)
+    top_k: number of top candidates to request from rapidfuzz (must be >=1)
+    min_len: minimum normalized length of doc sentence to consider (chars)
+    debug: if True, print diagnostic info on unexpected return types
+    """
+    if top_k is None or top_k < 1:
+        raise ValueError("top_k must be >= 1. Set top_k=1 (or higher).")
+    if min_len is None:
+        min_len = 0
 
-# ---- extraction & sentence splitting ----
-def extract_text_docx(path: Path) -> str:
-    doc = docx.Document(str(path))
-    paragraphs = [p.text for p in doc.paragraphs if p.text and p.text.strip()]
-    return "\n".join(paragraphs)
+    # Build normalized map: index -> normalized sentence
+    def _normalize(s):
+        s2 = s.lower().strip()
+        s2 = s2.replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
+        s2 = s2.replace("\u2013", "-").replace("\u2014", "-")
+        s2 = re.sub(r"\s+", " ", s2)
+        s2 = re.sub(r"[“”‘’«»]", "", s2)
+        s2 = s2.strip(' \t\n\r"\'.,;:()[]{}')
+        return s2
 
-def split_sentences_rulebased(text: str) -> List[str]:
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = re.sub(r"\n\s*\n", "\n\n", text)
-    text = text.replace("\n\n", "<<<PARA>>>")
-    text = text.replace("\n", " ")
-    text = text.replace("<<<PARA>>>", "\n\n")
+    pdf_norm_map = {i: _normalize(obj["sentence"]) for i, obj in enumerate(pdf_sent_objs)}
+    # Also keep reverse mapping from normalized string -> first index (for fallback)
+    rev_map = {}
+    for idx, norm_text in pdf_norm_map.items():
+        if norm_text not in rev_map:
+            rev_map[norm_text] = idx
 
-    sents = []
-    for para in text.split("\n\n"):
-        para = para.strip()
-        if not para:
-            continue
-        parts = SENT_END_RE.split(para)
-        cur = ""
-        for i, p in enumerate(parts):
-            if i % 2 == 0:
-                cur = p if cur == "" else cur + p
-            else:
-                cur = (cur + p).strip()
-                if cur:
-                    sents.append(cur)
-                cur = ""
-        if cur:
-            if len(cur) > 400:
-                sub = re.split(r'[;:,]\s+', cur)
-                sents.extend([ss.strip() for ss in sub if ss.strip()])
-            else:
-                sents.append(cur.strip())
-    sents = [re.sub(r'\s+', ' ', s).strip() for s in sents if s and s.strip()]
-    return sents
-
-def extract_pdf_pages_with_sentences_all(path: Path) -> List[Dict]:
-    """Extract sentences for all pages (1..N). Returns list of {'page', 'sentence', 'sent_index_on_page'}"""
     results = []
-    with pdfplumber.open(str(path)) as pdf:
-        max_p = len(pdf.pages)
-        for pno in range(1, max_p + 1):
-            page = pdf.pages[pno - 1]
-            raw = page.extract_text() or ""
-            if not raw:
-                continue
-            lines = raw.splitlines()
-            fixed = []
-            i = 0
-            while i < len(lines):
-                line = lines[i].rstrip()
-                # handle LaTeX hyphenation "exam-\nple"
-                if line.endswith("-") and i + 1 < len(lines):
-                    nxt = lines[i + 1].lstrip()
-                    fixed.append(line[:-1] + nxt)
-                    i += 2
-                    continue
-                nxt = lines[i + 1] if i + 1 < len(lines) else ""
-                if nxt:
-                    nxts = nxt.lstrip()
-                    if (not re.search(r"[.!?\"'’”]\s*$", line)) and nxts and nxts[0].islower():
-                        fixed.append(line + " " + nxts)
-                        i += 2
-                        continue
-                fixed.append(line)
-                i += 1
-            page_text = "\n".join(fixed)
-            page_text = re.sub(r"\n{3,}", "\n\n", page_text)
-            page_sents = split_sentences_rulebased(page_text)
-            for idx, snt in enumerate(page_sents):
-                results.append({"page": pno, "sentence": snt, "sent_index_on_page": idx})
-    return results
-
-# ---- normalization & fuzzy match ----
-def normalize(sent: str) -> str:
-    s = sent.lower().strip()
-    s = s.replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
-    s = s.replace("\u2013", "-").replace("\u2014", "-")
-    s = re.sub(r"\s+", " ", s)
-    s = re.sub(r"[“”‘’«»]", "", s)
-    s = s.strip(' \t\n\r"\'.,;:()[]{}')
-    return s
-
-def high_thresh_fuzzy_matches(doc_sents: List[str],
-                              pdf_sent_objs: List[Dict],
-                              threshold: float = 95.0,
-                              top_k: int = 1,
-                              min_len: int = 20) -> List[Dict]:
-    pdf_norm_map = {i: normalize(obj["sentence"]) for i, obj in enumerate(pdf_sent_objs)}
-    results = []
-    choices = pdf_norm_map
     for i, ds in enumerate(doc_sents):
-        ns = normalize(ds)
+        ns = _normalize(ds)
         if len(ns) < min_len:
             continue
-        matches = process.extract(ns, choices, scorer=fuzz.token_sort_ratio, limit=top_k)
-        for match_key, score, _ in matches:
+
+        # Run process.extract; it may return (key, score, match) where key is either index (our dict key)
+        # or the matched text (if choices were passed differently). We pass our dict directly, so it should return keys.
+        matches = process.extract(ns, pdf_norm_map, scorer=fuzz.token_sort_ratio, limit=top_k)
+
+        # Handle each match robustly
+        for entry in matches:
+            # entry may be (key, score, match) or (match_string, score, index) depending on choices type
+            # So unpack defensively
+            if len(entry) == 3:
+                key_or_match, score, _ = entry
+            elif len(entry) == 2:
+                # Some variants return (match, score)
+                key_or_match, score = entry
+            else:
+                # Unexpected structure
+                if debug:
+                    print("Unexpected 'matches' entry format:", entry)
+                continue
+
+            # Determine pdf_idx:
+            pdf_idx = None
+            # If the returned key is an int-like (our dict keys were ints), accept it
+            try:
+                # If key_or_match is a string containing digits only, int() would succeed but be wrong — guard against that by checking membership.
+                if isinstance(key_or_match, int):
+                    pdf_idx = int(key_or_match)
+                else:
+                    # If it's a string, it might be one of:
+                    # - the dict key (if keys were strings)
+                    # - the matched text (normalized)
+                    # Try to see if it equals any of our normalized values:
+                    if key_or_match in pdf_norm_map:
+                        # this is the case where keys are strings and match the key
+                        # convert to index by looking up keys that equal this string
+                        # find the first index whose key equals key_or_match
+                        for k in pdf_norm_map:
+                            if k == key_or_match:
+                                pdf_idx = k
+                                break
+                    else:
+                        # fallback: treat key_or_match as the matched normalized text
+                        k_norm = _normalize(str(key_or_match))
+                        if k_norm in rev_map:
+                            pdf_idx = rev_map[k_norm]
+            except Exception as e:
+                if debug:
+                    print("Error while determining pdf_idx for match:", key_or_match, "error:", e)
+                pdf_idx = None
+
+            # If pdf_idx still None, try to find best candidate by scanning pdf_norm_map for exact string match
+            if pdf_idx is None:
+                # final fallback: find pdf sentence whose normalized text equals the matched string OR
+                # whose normalized text has highest rapidfuzz ratio to ns (but only if score close)
+                # but to keep behavior safe, we skip ambiguous fallback unless debug
+                if debug:
+                    print("Could not map returned key to index. key_or_match:", repr(key_or_match))
+                continue
+
+            # Record match if score >= threshold
             if score >= threshold:
-                pdf_idx = int(match_key)
                 pdf_obj = pdf_sent_objs[pdf_idx]
                 results.append({
                     "docx_index": i,
                     "docx_sentence": ds,
                     "pdf_index": pdf_idx,
                     "pdf_sentence": pdf_obj["sentence"],
-                    "pdf_page": pdf_obj["page"],
+                    "pdf_page": pdf_obj.get("page", None),
                     "fuzzy_score": float(score)
                 })
     return results
-
-# ---- highlighting using PyMuPDF ----
-def highlight_pdf_matches(pdf_path: Path,
-                          matches: List[Dict],
-                          out_path: Optional[Path] = None,
-                          highlight_color: Tuple[float,float,float] = (1, 0.8, 0.0),
-                          mark_opacity: float = 0.35):
-    if out_path is None:
-        out_path = pdf_path.with_name(pdf_path.stem + "_highlighted.pdf")
-    doc = fitz.open(str(pdf_path))
-    page_to_matches = {}
-    for m in matches:
-        p = int(m["pdf_page"])
-        page_to_matches.setdefault(p, []).append(m)
-
-    for page_num, page_matches in page_to_matches.items():
-        page = doc[page_num - 1]
-        for m in page_matches:
-            target = m["pdf_sentence"].strip()
-            if not target:
-                continue
-            found_rects = []
-            # exact search
-            try:
-                rects = page.search_for(target, hit_max=64)
-                if rects:
-                    found_rects = rects
-            except Exception:
-                found_rects = []
-            # fallback: search for snippet
-            if not found_rects:
-                snippet = target[:120].strip()
-                if snippet:
-                    try:
-                        rects = page.search_for(snippet, hit_max=64)
-                        if rects:
-                            found_rects = rects
-                    except Exception:
-                        found_rects = []
-            # fallback tokens
-            if not found_rects:
-                tokens = [t for t in re.split(r'\s+', target) if len(t) > 4]
-                for tok in tokens[:4]:
-                    try:
-                        rects = page.search_for(tok, hit_max=64)
-                        if rects:
-                            found_rects.extend(rects)
-                    except Exception:
-                        pass
-            # draw highlights
-            for r in found_rects:
-                highlight = page.add_rect_annot(r)
-                highlight.set_colors(stroke=highlight_color, fill=highlight_color)
-                highlight.set_opacity(mark_opacity)
-                highlight.set_border(width=0)
-                highlight.update()
-    doc.save(str(out_path))
-    doc.close()
-    return out_path
-
-# ---- wrapper to run for all pages ----
-def run_and_highlight_all(docx_path: Path,
-                          pdf_path: Path,
-                          fuzzy_threshold: float = 95.0,
-                          top_k: int = 1,
-                          min_len: int = 20,
-                          out_pdf_path: Optional[Path] = None):
-    docx_text = extract_text_docx(docx_path)
-    pdf_sent_objs = extract_pdf_pages_with_sentences_all(pdf_path)
-    pdf_sents = [p["sentence"] for p in pdf_sent_objs]
-    docx_sents = split_sentences_rulebased(docx_text)
-    print(f"DOCX sentences: {len(docx_sents)}, PDF sentences (all pages): {len(pdf_sents)}")
-
-    matches = high_thresh_fuzzy_matches(docx_sents, pdf_sent_objs,
-                                        threshold=fuzzy_threshold, top_k=top_k, min_len=min_len)
-    print(f"Found {len(matches)} fuzzy matches (threshold ≥ {fuzzy_threshold}).")
-
-    if not matches:
-        print("No near-exact matches found. No highlighted PDF produced.")
-        return pd.DataFrame(), None
-
-    out_pdf = highlight_pdf_matches(pdf_path, matches, out_path=out_pdf_path)
-    df = pd.DataFrame(matches)
-    return df, out_pdf
-
-# ---- example call: set your paths and run ----
-# docx_path = Path("your_doc.docx")
-# pdf_path  = Path("your_pdf.pdf")
-# df_matches, out_pdf = run_and_highlight_all(docx_path, pdf_path, fuzzy_threshold=95.0, top_k=1, min_len=20)
-# df_matches.to_csv("near_exact_matches_allpages.csv", index=False)
-# print("Highlighted PDF:", out_pdf)
