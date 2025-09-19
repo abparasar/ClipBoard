@@ -1,143 +1,191 @@
-# Robust replacement for high_thresh_fuzzy_matches
-# Paste this into your notebook instead of the old function.
-
-from rapidfuzz import process, fuzz
+# Replace your old highlight_pdf_matches with this robust version (same name)
+# Requires: pip install pymupdf
+import fitz
 import re
+from pathlib import Path
+from typing import Tuple, List, Dict, Optional
+from math import inf
 
-def high_thresh_fuzzy_matches(doc_sents, pdf_sent_objs, threshold=95.0, top_k=1, min_len=20, debug=False):
+def _rect_union(rects: List[fitz.Rect]) -> Optional[fitz.Rect]:
+    if not rects:
+        return None
+    x0 = min(r.x0 for r in rects)
+    y0 = min(r.y0 for r in rects)
+    x1 = max(r.x1 for r in rects)
+    y1 = max(r.y1 for r in rects)
+    return fitz.Rect(x0, y0, x1, y1)
+
+def _normalize_for_match(s: str) -> str:
+    s2 = s.lower().strip()
+    s2 = s2.replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
+    s2 = s2.replace("\u2013", "-").replace("\u2014", "-")
+    s2 = re.sub(r"\s+", " ", s2)
+    s2 = re.sub(r"[“”‘’«»]", "", s2)
+    s2 = s2.strip(' \t\n\r"\'.,;:()[]{}')
+    return s2
+
+def highlight_pdf_matches(pdf_path: Path,
+                          matches: List[Dict],
+                          out_path: Optional[Path] = None,
+                          highlight_color: Tuple[float,float,float] = (1, 0.8, 0.0),
+                          mark_opacity: float = 0.35,
+                          debug: bool = False):
     """
-    Robust fuzzy matcher.
-    - doc_sents: list[str] of sentences from DOCX
-    - pdf_sent_objs: list[dict] with keys {'page','sentence',...} for all PDF sentences
-    - threshold: fuzzy threshold (0-100)
-    - top_k: number of top candidates to request (must be >=1)
-    - min_len: minimum normalized length (chars) for doc sentence to be considered
-    - debug: print diagnostic info for problematic matches
-    Returns: list of match dicts like before (docx_index, docx_sentence, pdf_index, pdf_sentence, pdf_page, fuzzy_score)
+    Robust highlight: tries exact search, snippet search, then word-bbox sequence fallback,
+    then token-union fallback. Writes a new PDF with rectangle annotations (highlights).
+    - pdf_path: Path to original PDF
+    - matches: list of dicts containing at least 'pdf_page' (1-indexed) and 'pdf_sentence'
+    - out_path: where to save highlighted PDF; default: originalname_highlighted.pdf
+    - highlight_color: RGB tuple (0..1)
+    - mark_opacity: 0..1
+    - debug: if True, prints diagnostics for misses
     """
-    if top_k is None or top_k < 1:
-        raise ValueError("top_k must be >= 1 (do not use 0).")
+    if out_path is None:
+        out_path = pdf_path.with_name(pdf_path.stem + "_highlighted.pdf")
 
-    # normalizer (same as other code)
-    def _normalize(s):
-        s2 = str(s).lower().strip()
-        s2 = s2.replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
-        s2 = s2.replace("\u2013", "-").replace("\u2014", "-")
-        s2 = re.sub(r"\s+", " ", s2)
-        s2 = re.sub(r"[“”‘’«»]", "", s2)
-        s2 = s2.strip(' \t\n\r"\'.,;:()[]{}')
-        return s2
-
-    # Build list of normalized pdf sentences and reverse map (norm_text -> first index)
-    pdf_norm_list = []
-    rev_map = {}
-    for idx, obj in enumerate(pdf_sent_objs):
-        norm = _normalize(obj.get("sentence", ""))
-        pdf_norm_list.append(norm)
-        if norm not in rev_map:
-            rev_map[norm] = idx
-
-    results = []
-    for i, ds in enumerate(doc_sents):
-        ns = _normalize(ds)
-        if len(ns) < (min_len or 0):
-            continue
-
-        # Use list choices so process.extract returns (match, score, index) consistently.
-        # But defensive code below supports other formats too.
+    doc = fitz.open(str(pdf_path))
+    page_to_matches = {}
+    for m in matches:
         try:
-            matches = process.extract(ns, pdf_norm_list, scorer=fuzz.token_sort_ratio, limit=top_k)
+            p = int(m["pdf_page"])
         except Exception:
-            # fallback: build dict mapping index->text and try again
-            pdf_norm_map = {idx: txt for idx, txt in enumerate(pdf_norm_list)}
-            matches = process.extract(ns, pdf_norm_map, scorer=fuzz.token_sort_ratio, limit=top_k)
+            # skip invalid page info
+            if debug:
+                print("Skipping match with invalid page:", m)
+            continue
+        page_to_matches.setdefault(p, []).append(m)
 
-        for entry in matches:
-            # entry usually: (match_text, score, index) when choices is list
-            # but can sometimes be (key, score, match) with other choices types.
-            pdf_idx = None
-            score = None
-            key_or_match = None
+    for page_num, page_matches in page_to_matches.items():
+        page = doc[page_num - 1]
+        # list of page words: tuples (x0,y0,x1,y1, text, block_no, line_no, word_no)
+        words = page.get_text("words")
+        # normalized page word list for lookups
+        page_words = []
+        for w in words:
+            x0,y0,x1,y1, txt, blockno, lineno, wordno = w
+            page_words.append({
+                "text": txt,
+                "norm": _normalize_for_match(txt),
+                "rect": fitz.Rect(x0,y0,x1,y1),
+                "idx": (blockno, lineno, wordno)
+            })
+        pw_norms = [pw["norm"] for pw in page_words]
+        page_text_norm_joined = " ".join(pw_norms)
 
-            if isinstance(entry, tuple) or isinstance(entry, list):
-                if len(entry) == 3:
-                    key_or_match, score, maybe_idx = entry
-                    # if maybe_idx is int -> good
-                    if isinstance(maybe_idx, int):
-                        pdf_idx = int(maybe_idx)
-                    else:
-                        # maybe_idx is string - try to map it
-                        try:
-                            pdf_idx = int(maybe_idx)
-                        except Exception:
-                            pdf_idx = None
-                elif len(entry) == 2:
-                    # (match, score)
-                    key_or_match, score = entry
-                else:
-                    # unexpected length
-                    if debug:
-                        print("Unexpected entry format from process.extract:", entry)
-                    continue
-            else:
-                # completely unexpected type
+        for m in page_matches:
+            target = (m.get("pdf_sentence") or "").strip()
+            if not target:
                 if debug:
-                    print("Unexpected entry type from process.extract:", type(entry), entry)
+                    print(f"[page {page_num}] empty target sentence, skipping.")
                 continue
+            found_rects = []
 
-            # If pdf_idx not determined, try resolving from key_or_match
-            if pdf_idx is None and key_or_match is not None:
-                # If key_or_match is int-like string, try converting
-                if isinstance(key_or_match, int):
-                    pdf_idx = int(key_or_match)
-                else:
-                    # key_or_match may be the matched normalized text
-                    key_norm = _normalize(str(key_or_match))
-                    if key_norm in rev_map:
-                        pdf_idx = rev_map[key_norm]
-                    else:
-                        # fallback: do a single extractOne against pdf_norm_list to get index
-                        try:
-                            # extractOne returns (match, score, index)
-                            one = process.extractOne(ns, pdf_norm_list, scorer=fuzz.token_sort_ratio)
-                            if one and len(one) == 3:
-                                _, one_score, one_idx = one
-                                # accept only if it's reasonably close to returned score (or if no score available)
-                                pdf_idx = int(one_idx)
-                                if score is None:
-                                    score = one_score
-                            else:
-                                if debug:
-                                    print("extractOne fallback returned unexpected:", one)
-                        except Exception as e:
-                            if debug:
-                                print("extractOne fallback error:", e)
-
-            # At this point, pdf_idx should be int if mapping succeeded
-            if pdf_idx is None:
-                if debug:
-                    print(f"Could not determine pdf index for docx_idx={i}; entry={entry}; key_or_match={key_or_match}")
-                continue
-
-            # Ensure score is numeric
+            # 1) Try exact search
             try:
-                score = float(score)
-            except Exception:
-                # fallback: compute ratio directly between ns and pdf_norm_list[pdf_idx]
-                try:
-                    score = float(fuzz.token_sort_ratio(ns, pdf_norm_list[pdf_idx]))
-                except Exception:
-                    score = 0.0
+                rects = page.search_for(target, hit_max=64)
+                if rects:
+                    found_rects = rects
+                    if debug:
+                        print(f"[page {page_num}] exact search found {len(rects)} rects")
+            except Exception as e:
+                if debug:
+                    print("exact search error:", e)
 
-            if score >= threshold:
-                pdf_obj = pdf_sent_objs[pdf_idx]
-                results.append({
-                    "docx_index": i,
-                    "docx_sentence": ds,
-                    "pdf_index": pdf_idx,
-                    "pdf_sentence": pdf_obj.get("sentence", ""),
-                    "pdf_page": pdf_obj.get("page", None),
-                    "fuzzy_score": float(score)
-                })
+            # 2) Snippet search (first up to 120 chars)
+            if not found_rects:
+                snippet = target[:120].strip()
+                if len(snippet) > 6:
+                    try:
+                        rects = page.search_for(snippet, hit_max=64)
+                        if rects:
+                            found_rects = rects
+                            if debug:
+                                print(f"[page {page_num}] snippet search found {len(rects)} rects")
+                    except Exception as e:
+                        if debug:
+                            print("snippet search error:", e)
 
-    return results
+            # 3) Word-sequence bbox fallback
+            if not found_rects:
+                target_norm = _normalize_for_match(target)
+                target_tokens = [t for t in re.split(r'\s+', target_norm) if t]
+                if len(target_tokens) >= 3 and page_words:
+                    # First try to find exact token subsequence of first up-to-8 tokens
+                    N_head = min(8, len(target_tokens))
+                    head = target_tokens[:N_head]
+                    # try sliding window for exact head match
+                    matched = False
+                    for i in range(len(pw_norms) - N_head + 1):
+                        if pw_norms[i:i+N_head] == head:
+                            # expand j while matches continue
+                            j = i + N_head
+                            k = N_head
+                            while j < len(pw_norms) and k < len(target_tokens) and pw_norms[j] == target_tokens[k]:
+                                j += 1; k += 1
+                            rects_seq = [page_words[t]["rect"] for t in range(i, j)]
+                            union = _rect_union(rects_seq)
+                            if union:
+                                found_rects = [union]
+                                matched = True
+                                if debug:
+                                    print(f"[page {page_num}] head token subsequence matched at {i}-{j-1}")
+                                break
+                    # if not matched, try a looser sequence of at least 3 tokens in order
+                    if not matched:
+                        for i in range(len(pw_norms)):
+                            if pw_norms[i] == target_tokens[0]:
+                                j = i+1
+                                k = 1
+                                rects_seq = [page_words[i]["rect"]]
+                                while j < len(pw_norms) and k < len(target_tokens) and (pw_norms[j] == target_tokens[k]):
+                                    rects_seq.append(page_words[j]["rect"])
+                                    j += 1; k += 1
+                                if k >= 3:
+                                    union = _rect_union(rects_seq)
+                                    if union:
+                                        found_rects = [union]
+                                        if debug:
+                                            print(f"[page {page_num}] loose sequence matched at {i}-{j-1}")
+                                        break
+
+            # 4) Token-union fallback: search for a few long tokens and union their rects
+            if not found_rects and len(target) > 20:
+                tok_candidates = [t for t in re.split(r'\s+', target) if len(t) > 6][:4]
+                token_rects = []
+                for tok in tok_candidates:
+                    try:
+                        rlist = page.search_for(tok, hit_max=16)
+                        if rlist:
+                            token_rects.extend(rlist)
+                    except Exception:
+                        pass
+                if token_rects:
+                    union = _rect_union(token_rects)
+                    if union:
+                        found_rects = [union]
+                        if debug:
+                            print(f"[page {page_num}] token-union fallback found {len(token_rects)} rects")
+
+            # Draw annotations for found rects
+            if found_rects:
+                for r in found_rects:
+                    ann = page.add_rect_annot(r)
+                    ann.set_colors(stroke=highlight_color, fill=highlight_color)
+                    ann.set_opacity(mark_opacity)
+                    ann.set_border(width=0)
+                    ann.update()
+            else:
+                if debug:
+                    print(f"[page {page_num}] Could NOT find rects for target (len {len(target)}).")
+                    try:
+                        page_text = page.get_text("text") or "(no page text)"
+                        preview = page_text[:1000].replace("\n"," ")
+                        print("Page text preview:", preview)
+                        print("Target preview:", target[:200])
+                    except Exception as e:
+                        print("Error getting page text for debug:", e)
+
+    # Save new PDF
+    doc.save(str(out_path))
+    doc.close()
+    return out_path
