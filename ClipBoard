@@ -1,24 +1,26 @@
-# Robust high-threshold fuzzy function (notebook-friendly)
+# Robust replacement for high_thresh_fuzzy_matches
+# Paste this into your notebook instead of the old function.
+
 from rapidfuzz import process, fuzz
 import re
 
-def high_thresh_fuzzy_matches_safe(doc_sents, pdf_sent_objs, threshold=95.0, top_k=1, min_len=20, debug=False):
+def high_thresh_fuzzy_matches(doc_sents, pdf_sent_objs, threshold=95.0, top_k=1, min_len=20, debug=False):
     """
-    doc_sents: list of docx sentences (strings)
-    pdf_sent_objs: list of dicts {'page':..., 'sentence':..., ...}
-    threshold: fuzzy threshold (0-100)
-    top_k: number of top candidates to request from rapidfuzz (must be >=1)
-    min_len: minimum normalized length of doc sentence to consider (chars)
-    debug: if True, print diagnostic info on unexpected return types
+    Robust fuzzy matcher.
+    - doc_sents: list[str] of sentences from DOCX
+    - pdf_sent_objs: list[dict] with keys {'page','sentence',...} for all PDF sentences
+    - threshold: fuzzy threshold (0-100)
+    - top_k: number of top candidates to request (must be >=1)
+    - min_len: minimum normalized length (chars) for doc sentence to be considered
+    - debug: print diagnostic info for problematic matches
+    Returns: list of match dicts like before (docx_index, docx_sentence, pdf_index, pdf_sentence, pdf_page, fuzzy_score)
     """
     if top_k is None or top_k < 1:
-        raise ValueError("top_k must be >= 1. Set top_k=1 (or higher).")
-    if min_len is None:
-        min_len = 0
+        raise ValueError("top_k must be >= 1 (do not use 0).")
 
-    # Build normalized map: index -> normalized sentence
+    # normalizer (same as other code)
     def _normalize(s):
-        s2 = s.lower().strip()
+        s2 = str(s).lower().strip()
         s2 = s2.replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
         s2 = s2.replace("\u2013", "-").replace("\u2014", "-")
         s2 = re.sub(r"\s+", " ", s2)
@@ -26,86 +28,116 @@ def high_thresh_fuzzy_matches_safe(doc_sents, pdf_sent_objs, threshold=95.0, top
         s2 = s2.strip(' \t\n\r"\'.,;:()[]{}')
         return s2
 
-    pdf_norm_map = {i: _normalize(obj["sentence"]) for i, obj in enumerate(pdf_sent_objs)}
-    # Also keep reverse mapping from normalized string -> first index (for fallback)
+    # Build list of normalized pdf sentences and reverse map (norm_text -> first index)
+    pdf_norm_list = []
     rev_map = {}
-    for idx, norm_text in pdf_norm_map.items():
-        if norm_text not in rev_map:
-            rev_map[norm_text] = idx
+    for idx, obj in enumerate(pdf_sent_objs):
+        norm = _normalize(obj.get("sentence", ""))
+        pdf_norm_list.append(norm)
+        if norm not in rev_map:
+            rev_map[norm] = idx
 
     results = []
     for i, ds in enumerate(doc_sents):
         ns = _normalize(ds)
-        if len(ns) < min_len:
+        if len(ns) < (min_len or 0):
             continue
 
-        # Run process.extract; it may return (key, score, match) where key is either index (our dict key)
-        # or the matched text (if choices were passed differently). We pass our dict directly, so it should return keys.
-        matches = process.extract(ns, pdf_norm_map, scorer=fuzz.token_sort_ratio, limit=top_k)
+        # Use list choices so process.extract returns (match, score, index) consistently.
+        # But defensive code below supports other formats too.
+        try:
+            matches = process.extract(ns, pdf_norm_list, scorer=fuzz.token_sort_ratio, limit=top_k)
+        except Exception:
+            # fallback: build dict mapping index->text and try again
+            pdf_norm_map = {idx: txt for idx, txt in enumerate(pdf_norm_list)}
+            matches = process.extract(ns, pdf_norm_map, scorer=fuzz.token_sort_ratio, limit=top_k)
 
-        # Handle each match robustly
         for entry in matches:
-            # entry may be (key, score, match) or (match_string, score, index) depending on choices type
-            # So unpack defensively
-            if len(entry) == 3:
-                key_or_match, score, _ = entry
-            elif len(entry) == 2:
-                # Some variants return (match, score)
-                key_or_match, score = entry
+            # entry usually: (match_text, score, index) when choices is list
+            # but can sometimes be (key, score, match) with other choices types.
+            pdf_idx = None
+            score = None
+            key_or_match = None
+
+            if isinstance(entry, tuple) or isinstance(entry, list):
+                if len(entry) == 3:
+                    key_or_match, score, maybe_idx = entry
+                    # if maybe_idx is int -> good
+                    if isinstance(maybe_idx, int):
+                        pdf_idx = int(maybe_idx)
+                    else:
+                        # maybe_idx is string - try to map it
+                        try:
+                            pdf_idx = int(maybe_idx)
+                        except Exception:
+                            pdf_idx = None
+                elif len(entry) == 2:
+                    # (match, score)
+                    key_or_match, score = entry
+                else:
+                    # unexpected length
+                    if debug:
+                        print("Unexpected entry format from process.extract:", entry)
+                    continue
             else:
-                # Unexpected structure
+                # completely unexpected type
                 if debug:
-                    print("Unexpected 'matches' entry format:", entry)
+                    print("Unexpected entry type from process.extract:", type(entry), entry)
                 continue
 
-            # Determine pdf_idx:
-            pdf_idx = None
-            # If the returned key is an int-like (our dict keys were ints), accept it
-            try:
-                # If key_or_match is a string containing digits only, int() would succeed but be wrong — guard against that by checking membership.
+            # If pdf_idx not determined, try resolving from key_or_match
+            if pdf_idx is None and key_or_match is not None:
+                # If key_or_match is int-like string, try converting
                 if isinstance(key_or_match, int):
                     pdf_idx = int(key_or_match)
                 else:
-                    # If it's a string, it might be one of:
-                    # - the dict key (if keys were strings)
-                    # - the matched text (normalized)
-                    # Try to see if it equals any of our normalized values:
-                    if key_or_match in pdf_norm_map:
-                        # this is the case where keys are strings and match the key
-                        # convert to index by looking up keys that equal this string
-                        # find the first index whose key equals key_or_match
-                        for k in pdf_norm_map:
-                            if k == key_or_match:
-                                pdf_idx = k
-                                break
+                    # key_or_match may be the matched normalized text
+                    key_norm = _normalize(str(key_or_match))
+                    if key_norm in rev_map:
+                        pdf_idx = rev_map[key_norm]
                     else:
-                        # fallback: treat key_or_match as the matched normalized text
-                        k_norm = _normalize(str(key_or_match))
-                        if k_norm in rev_map:
-                            pdf_idx = rev_map[k_norm]
-            except Exception as e:
-                if debug:
-                    print("Error while determining pdf_idx for match:", key_or_match, "error:", e)
-                pdf_idx = None
+                        # fallback: do a single extractOne against pdf_norm_list to get index
+                        try:
+                            # extractOne returns (match, score, index)
+                            one = process.extractOne(ns, pdf_norm_list, scorer=fuzz.token_sort_ratio)
+                            if one and len(one) == 3:
+                                _, one_score, one_idx = one
+                                # accept only if it's reasonably close to returned score (or if no score available)
+                                pdf_idx = int(one_idx)
+                                if score is None:
+                                    score = one_score
+                            else:
+                                if debug:
+                                    print("extractOne fallback returned unexpected:", one)
+                        except Exception as e:
+                            if debug:
+                                print("extractOne fallback error:", e)
 
-            # If pdf_idx still None, try to find best candidate by scanning pdf_norm_map for exact string match
+            # At this point, pdf_idx should be int if mapping succeeded
             if pdf_idx is None:
-                # final fallback: find pdf sentence whose normalized text equals the matched string OR
-                # whose normalized text has highest rapidfuzz ratio to ns (but only if score close)
-                # but to keep behavior safe, we skip ambiguous fallback unless debug
                 if debug:
-                    print("Could not map returned key to index. key_or_match:", repr(key_or_match))
+                    print(f"Could not determine pdf index for docx_idx={i}; entry={entry}; key_or_match={key_or_match}")
                 continue
 
-            # Record match if score >= threshold
+            # Ensure score is numeric
+            try:
+                score = float(score)
+            except Exception:
+                # fallback: compute ratio directly between ns and pdf_norm_list[pdf_idx]
+                try:
+                    score = float(fuzz.token_sort_ratio(ns, pdf_norm_list[pdf_idx]))
+                except Exception:
+                    score = 0.0
+
             if score >= threshold:
                 pdf_obj = pdf_sent_objs[pdf_idx]
                 results.append({
                     "docx_index": i,
                     "docx_sentence": ds,
                     "pdf_index": pdf_idx,
-                    "pdf_sentence": pdf_obj["sentence"],
+                    "pdf_sentence": pdf_obj.get("sentence", ""),
                     "pdf_page": pdf_obj.get("page", None),
                     "fuzzy_score": float(score)
                 })
+
     return results
