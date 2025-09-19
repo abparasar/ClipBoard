@@ -1,0 +1,272 @@
+# Notebook-ready: detect near-exact copies and produce a highlighted PDF
+# Requirements:
+# pip install python-docx pdfplumber rapidfuzz pandas pymupdf
+# (pymupdf is the package name for PyMuPDF)
+
+import re
+from pathlib import Path
+from typing import List, Dict, Optional, Tuple
+import docx
+import pdfplumber
+from rapidfuzz import process, fuzz
+import fitz  # PyMuPDF
+import pandas as pd
+
+# -------------------------
+# Extraction & helpers (LaTeX-aware)
+# -------------------------
+SENT_END_RE = re.compile(r'([.!?]["\']?\s+)')
+
+def extract_text_docx(path: Path) -> str:
+    doc = docx.Document(str(path))
+    paragraphs = [p.text for p in doc.paragraphs if p.text and p.text.strip()]
+    return "\n".join(paragraphs)
+
+def split_sentences_rulebased(text: str) -> List[str]:
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"\n\s*\n", "\n\n", text)
+    text = text.replace("\n\n", "<<<PARA>>>")
+    text = text.replace("\n", " ")
+    text = text.replace("<<<PARA>>>", "\n\n")
+
+    sents = []
+    for para in text.split("\n\n"):
+        para = para.strip()
+        if not para:
+            continue
+        parts = SENT_END_RE.split(para)
+        cur = ""
+        for i, p in enumerate(parts):
+            if i % 2 == 0:
+                cur = p if cur == "" else cur + p
+            else:
+                cur = (cur + p).strip()
+                if cur:
+                    sents.append(cur)
+                cur = ""
+        if cur:
+            if len(cur) > 400:
+                sub = re.split(r'[;:,]\s+', cur)
+                sents.extend([ss.strip() for ss in sub if ss.strip()])
+            else:
+                sents.append(cur.strip())
+    sents = [re.sub(r'\s+', ' ', s).strip() for s in sents if s and s.strip()]
+    return sents
+
+def extract_pdf_pages_with_sentences(path: Path, start_page: Optional[int] = None, end_page: Optional[int] = None) -> List[Dict]:
+    results = []
+    with pdfplumber.open(str(path)) as pdf:
+        max_p = len(pdf.pages)
+        s = 1 if start_page is None else max(1, start_page)
+        e = max_p if end_page is None else min(max_p, end_page)
+        for pno in range(s, e + 1):
+            page = pdf.pages[pno - 1]
+            raw = page.extract_text() or ""
+            if not raw:
+                continue
+            lines = raw.splitlines()
+            fixed = []
+            i = 0
+            while i < len(lines):
+                line = lines[i].rstrip()
+                # fix hyphenation at EOL e.g., "exam-\nple"
+                if line.endswith("-") and i + 1 < len(lines):
+                    nxt = lines[i + 1].lstrip()
+                    fixed.append(line[:-1] + nxt)
+                    i += 2
+                    continue
+                nxt = lines[i + 1] if i + 1 < len(lines) else ""
+                if nxt:
+                    nxts = nxt.lstrip()
+                    if (not re.search(r"[.!?\"'’”]\s*$", line)) and nxts and nxts[0].islower():
+                        fixed.append(line + " " + nxts)
+                        i += 2
+                        continue
+                fixed.append(line)
+                i += 1
+            page_text = "\n".join(fixed)
+            page_text = re.sub(r"\n{3,}", "\n\n", page_text)
+            page_sents = split_sentences_rulebased(page_text)
+            for idx, snt in enumerate(page_sents):
+                results.append({"page": pno, "sentence": snt, "sent_index_on_page": idx})
+    return results
+
+# -------------------------
+# Normalization & fuzzy matching
+# -------------------------
+def normalize(sent: str) -> str:
+    s = sent.lower().strip()
+    s = s.replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
+    s = s.replace("\u2013", "-").replace("\u2014", "-")
+    s = re.sub(r"\s+", " ", s)
+    s = re.sub(r"[“”‘’«»]", "", s)
+    s = s.strip(' \t\n\r"\'.,;:()[]{}')
+    return s
+
+def high_thresh_fuzzy_matches(doc_sents: List[str],
+                              pdf_sent_objs: List[Dict],
+                              threshold: float = 95.0,
+                              top_k: int = 1,
+                              min_len: int = 20) -> List[Dict]:
+    pdf_norm_map = {i: normalize(obj["sentence"]) for i, obj in enumerate(pdf_sent_objs)}
+    results = []
+    choices = pdf_norm_map
+    for i, ds in enumerate(doc_sents):
+        ns = normalize(ds)
+        if len(ns) < min_len:
+            continue
+        matches = process.extract(ns, choices, scorer=fuzz.token_sort_ratio, limit=top_k)
+        for match_key, score, _ in matches:
+            if score >= threshold:
+                pdf_idx = int(match_key)
+                pdf_obj = pdf_sent_objs[pdf_idx]
+                results.append({
+                    "docx_index": i,
+                    "docx_sentence": ds,
+                    "pdf_index": pdf_idx,
+                    "pdf_sentence": pdf_obj["sentence"],
+                    "pdf_page": pdf_obj["page"],
+                    "fuzzy_score": float(score)
+                })
+    return results
+
+# -------------------------
+# Highlighting on PDF with PyMuPDF (fitz)
+# -------------------------
+def highlight_pdf_matches(pdf_path: Path,
+                          matches: List[Dict],
+                          out_path: Optional[Path] = None,
+                          highlight_color: Tuple[float,float,float] = (1, 0.8, 0.0),
+                          mark_opacity: float = 0.35):
+    """
+    pdf_path: original PDF
+    matches: list of dicts with keys 'pdf_page' (1-indexed) and 'pdf_sentence' (string)
+    out_path: if None, writes pdf_path.stem + '_highlighted.pdf' next to original
+    highlight_color: RGB tuple in 0..1
+    """
+    if out_path is None:
+        out_path = pdf_path.with_name(pdf_path.stem + "_highlighted.pdf")
+    doc = fitz.open(str(pdf_path))
+    # Group matches by page for efficiency
+    page_to_matches = {}
+    for m in matches:
+        p = int(m["pdf_page"])
+        page_to_matches.setdefault(p, []).append(m)
+
+    for page_num, page_matches in page_to_matches.items():
+        page = doc[page_num - 1]  # fitz page is 0-indexed
+        page_text = page.get_text("text") or ""
+        # Try to highlight occurrences of the sentence on the page using page.search_for()
+        for m in page_matches:
+            target = m["pdf_sentence"].strip()
+            found_rects = []
+            if not target:
+                continue
+            # 1) Try exact search for the PDF sentence text
+            try:
+                rects = page.search_for(target, hit_max=64)  # returns list of Rect
+                if rects:
+                    found_rects = rects
+            except Exception:
+                found_rects = []
+
+            # 2) If exact not found, try normalized search (collapse whitespace/punct)
+            if not found_rects:
+                norm_target = normalize(target)
+                # create a simplified page text mapping - search by substrings: try first 80 chars
+                snippet = target[:120].strip()
+                if snippet:
+                    try:
+                        rects = page.search_for(snippet, hit_max=64)
+                        if rects:
+                            found_rects = rects
+                    except Exception:
+                        found_rects = []
+
+            # 3) As fallback, search for shorter substring tokens (best-effort)
+            if not found_rects:
+                tokens = [t for t in re.split(r'\s+', target) if len(t) > 4]
+                for tok in tokens[:4]:  # try up to first 4 meaningful tokens
+                    try:
+                        rects = page.search_for(tok, hit_max=64)
+                        if rects:
+                            found_rects.extend(rects)
+                    except Exception:
+                        pass
+
+            # Draw highlights for found rects
+            for r in found_rects:
+                # Create a semi-transparent highlight
+                highlight = page.add_rect_annot(r)
+                highlight.set_colors(stroke=highlight_color, fill=highlight_color)
+                highlight.set_opacity(mark_opacity)
+                highlight.set_border(width=0)  # no border
+                highlight.update()
+
+    # Save as new file
+    doc.save(str(out_path))
+    doc.close()
+    return out_path
+
+# -------------------------
+# Example run (edit these variables as needed)
+# -------------------------
+# Paths
+# docx_path = Path("your_doc.docx")
+# pdf_path  = Path("your_pdf.pdf")
+# Optionally restrict page range if you know it
+# start_page = 40
+# end_page   = 50
+
+def run_and_highlight(docx_path: Path,
+                      pdf_path: Path,
+                      start_page: Optional[int] = None,
+                      end_page: Optional[int] = None,
+                      fuzzy_threshold: float = 95.0,
+                      top_k: int = 1,
+                      min_len: int = 20,
+                      out_pdf_path: Optional[Path] = None):
+    # 1. extract
+    print("Extracting DOCX...")
+    docx_text = extract_text_docx(docx_path)
+    print("Extracting PDF pages...")
+    pdf_sent_objs = extract_pdf_pages_with_sentences(pdf_path, start_page=start_page, end_page=end_page)
+    pdf_sents = [p["sentence"] for p in pdf_sent_objs]
+    print(f"DOCX sentences: approx {len(split_sentences_rulebased(docx_text))}, PDF sentences in range: {len(pdf_sents)}")
+
+    # 2. split docx sentences
+    docx_sents = split_sentences_rulebased(docx_text)
+
+    # 3. fuzzy matching
+    print(f"Running high-threshold fuzzy matching (threshold={fuzzy_threshold}) ...")
+    matches = high_thresh_fuzzy_matches(docx_sents, pdf_sent_objs, threshold=fuzzy_threshold, top_k=top_k, min_len=min_len)
+    print(f"Found {len(matches)} fuzzy matches (≥ {fuzzy_threshold}).")
+
+    if not matches:
+        print("No near-exact matches found. No PDF created.")
+        return pd.DataFrame(), None
+
+    # 4. create highlighted PDF
+    print("Highlighting matches in PDF...")
+    out_pdf = highlight_pdf_matches(pdf_path, matches, out_path=out_pdf_path)
+    print(f"Highlighted PDF written to: {out_pdf}")
+
+    # 5. return DataFrame of matches and output path
+    df = pd.DataFrame(matches)
+    return df, out_pdf
+
+# -------------------------
+# How to call (example)
+# -------------------------
+# df_matches, highlighted_pdf = run_and_highlight(
+#     Path("my_doc.docx"),
+#     Path("my_pdf.pdf"),
+#     start_page=40,
+#     end_page=50,
+#     fuzzy_threshold=95.0,
+#     top_k=1,
+#     min_len=20,
+#     out_pdf_path=None
+# )
+# df_matches.to_csv("near_exact_matches.csv", index=False)
+# df_matches.head(50)
