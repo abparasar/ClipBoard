@@ -1,1 +1,1 @@
-An ROC (Receiver Operating Characteristic) curve is a graph of the true detection rate (TDR) plotted against the true negative rate (TNR) across all score thresholds to show the trade-off between benefit and cost.
+AUC (Area Under the Curve) is the total area under the ROC curve, obtained by numerically integrating the true detection rate (TDR) as a function of the true negative rate (TNR) across all thresholds.
