@@ -1,1 +1,3 @@
-The KS represents the greatest difference between the TDR and TNR, while Sks is the score threshold at which this maximum difference is observed.
+You can write it in LaTeX math mode as:
+
+X = \frac{y}{z}
