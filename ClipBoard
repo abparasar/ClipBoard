@@ -1,3 +1,13 @@
-You can write it in LaTeX math mode as:
+If you mean “X equals y and z divided by a and b” you can write it in LaTeX like this:
 
-X = \frac{y}{z}
+X = \frac{y \;\text{and}\; z}{a \;\text{and}\; b}
+
+If instead you intend two separate equalities, write:
+
+X = y \quad\text{and}\quad X = \frac{z}{a \; b}
+
+—or, if you mean two fractions:
+
+X = \frac{y}{a} \quad\text{and}\quad \frac{z}{b}
+
+(Choose the version that matches your intended meaning.)
