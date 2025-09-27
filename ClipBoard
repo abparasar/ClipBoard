@@ -1,3 +1,5 @@
-The Gini coefficient (for model discrimination) is related to AUC and is given by
+The Kolmogorov–Smirnov (KS) statistic is defined as the maximum absolute difference between the cumulative distribution functions (CDFs) of the positive and negative classes:
 
-\text{Gini} = 2 \times \mathrm{AUC} - 1
+\mathrm{KS} = \max_{x} \left| F_{1}(x) - F_{0}(x) \right|
+
+where F_{1}(x) is the CDF of the positive (fraud) scores and F_{0}(x) is the CDF of the negative (non-fraud) scores.
