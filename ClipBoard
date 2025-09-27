@@ -1,1 +1,3 @@
-AUC (Area Under the Curve) is the total area under the ROC curve, obtained by numerically integrating the true detection rate (TDR) as a function of the true negative rate (TNR) across all thresholds.
+The Gini coefficient (for model discrimination) is related to AUC and is given by
+
+\text{Gini} = 2 \times \mathrm{AUC} - 1
