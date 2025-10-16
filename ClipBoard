@@ -1,5 +1,14 @@
-You can write the Fraud Detection Rate formula in LaTeX like this:
-
-\text{Fraud Detection Rate} =
-\frac{\text{Number of fraud transactions detected at or above binned}}
-{\text{Total Number of Fraud Transactions}}
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Dim Oldvalue As String
+    Dim Newvalue As String
+    On Error GoTo Exitsub
+    If Target.Address = "$F$2" Then 'Change F2 to your dropdown cell
+        Application.EnableEvents = False
+        Newvalue = Target.Value
+        Application.Undo
+        Oldvalue = Target.Value
+        Target.Value = Oldvalue & ", " & Newvalue
+    End If
+Exitsub:
+    Application.EnableEvents = True
+End Sub
