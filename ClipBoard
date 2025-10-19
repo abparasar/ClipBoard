@@ -1,14 +1,7 @@
-Private Sub Worksheet_Change(ByVal Target As Range)
-    Dim Oldvalue As String
-    Dim Newvalue As String
-    On Error GoTo Exitsub
-    If Target.Address = "$F$2" Then 'Change F2 to your dropdown cell
-        Application.EnableEvents = False
-        Newvalue = Target.Value
-        Application.Undo
-        Oldvalue = Target.Value
-        Target.Value = Oldvalue & ", " & Newvalue
-    End If
-Exitsub:
-    Application.EnableEvents = True
-End Sub
+The next stage is document authentication, where the system determines the document’s authenticity and integrity. Mitek structures authentication as a multi-layered process combining computer vision algorithms, machine learning models, and decision logic. At the low level, individual authenticators focus on specific document properties or feature groups—such as corner radius, font consistency, photo presence, or barcode validity—and output probabilities that indicate whether those properties appear legitimate or manipulated. These checks can be model-driven, using explicit computer vision algorithms, or data-driven, where the decision is based on machine learning models such as decision forests or gradient-boosted trees (e.g., XGBoost).
+
+At the high level, the outputs from these low-level authenticators are combined through ensemble models that aggregate the results. The aggregation happens in two steps: result aggregation or ensembling, followed by top-level aggregation that produces a unified document-level authenticity score. This ensemble modeling approach helps reduce false positives and improves the overall reliability of the verification decision.
+
+The authenticators used in this process cover a wide range of checks. They include rounded corner presence to evaluate the physical originality of the ID; document blacklist checks to detect known fraudulent templates; black-and-white copy detection to distinguish photocopies; generic and MRZ font checks to ensure consistency with standardized typefaces; barcode analysis to verify PDF417 data integrity; data and field comparisons to ensure logical consistency across extracted values; and document structure, liveness, and face presence checks to detect substituted or manipulated photos. Additional checks, such as portrait substitution and digital manipulation detection, rely on advanced computer vision and machine learning models trained on document image data to identify deepfakes, synthetic edits, and tampering artifacts.
+
+Following the low-level authentication, the system performs page-level aggregation, where the outputs of all authenticators corresponding to a single image or page are combined into a page-level authenticity score. This score accounts for both the reliability of each authenticator and the quality of the extracted data. When a document contains multiple pages, such as the front and back of an ID, the system performs document-level aggregation to produce a single authenticity score for the entire document. This document-level score typically takes the lowest page score as the final measure of authenticity, ensuring that a single weak or suspicious side of a document is enough to trigger further review.
