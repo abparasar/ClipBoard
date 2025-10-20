@@ -1,1 +1,2 @@
-Face comparison estimates how closely an applicant’s selfie matches the face on their ID. Mitek uses Rank One technology to generate a 0–100 similarity score, where scores below 80 indicate a non-match. Both a pass/fail flag and the score are returned via API. The model operates as an SDK, enabling Mitek to control version upgrades and conduct internal testing before integration; any unsatisfactory results delay deployment until vendor issues are resolved.
+The document verification models are trained and tested on non-static datasets containing over 500K document images, including 90K forgery samples.
+Data sources comprise both synthetic and real transactional documents, ensuring diverse and representative training coverage.
