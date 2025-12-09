@@ -1,3 +1,838 @@
-	1.	Comprehensive and Narrative – Written in a clear, detailed narrative (not bullet points), explaining the model and reasoning behind design choices.
-	2.	Proportionate to Model Risk – Depth and breadth of documentation should match the model’s risk level, with the highest rigor for high-risk models.
-	3.	Consistent and Structured – Follow organizational guidelines (e.g., Risk Tiering, Modular Documentation, Quant Council Writing) to ensure clarity and standardization.
+Nice, let’s turn everything we discussed into a full, end-to-end Python implementation.
+
+I’ll give you four files:
+	1.	image_processing.py – clean placeholder for future image/OCR work
+	2.	document_processing.py – PDFs/DOCX → cleaned text + tables → chunks
+	3.	rag_index.py – FAISS index + embeddings + incremental updates / replace
+	4.	rag_chatbot.py – RAG chatbot with:
+	•	local embedding model (E5) on GPU
+	•	local LLaMA model on GPU
+	•	conversation history
+	•	precise by default, “elaborate” if user asks
+	•	hard restriction to only answer from documents
+	•	citations from which documents were used
+
+You can adjust paths/model names for your actual setup.
+
+⸻
+
+0. Dependencies (comment only)
+
+pip install pymupdf tabula-py python-docx sentence-transformers faiss-cpu transformers accelerate
+# For GPU Faiss, use faiss-gpu instead of faiss-cpu if your environment supports it
+# tabula-py also needs Java installed
+
+
+⸻
+
+1. image_processing.py (placeholder module, importable later)
+
+# image_processing.py
+
+"""
+Placeholder module for future image / OCR extraction.
+
+You can later implement:
+- extracting images from PDFs / DOCX
+- running OCR over those images
+and then import this module inside your main pipeline.
+"""
+
+from typing import List, Any
+
+
+class ImageExtractor:
+    def __init__(self) -> None:
+        # Put any model / OCR initialization here later
+        pass
+
+    def extract_images_from_pdf(self, pdf_path: str) -> List[Any]:
+        """
+        Extract images from a PDF.
+
+        Returns a list of image objects or file paths.
+        Currently not implemented.
+        """
+        raise NotImplementedError("Image extraction from PDF is not implemented yet.")
+
+    def extract_images_from_docx(self, docx_path: str) -> List[Any]:
+        """
+        Extract images from a DOCX file.
+
+        Returns a list of image objects or file paths.
+        Currently not implemented.
+        """
+        raise NotImplementedError("Image extraction from DOCX is not implemented yet.")
+
+    def ocr_image(self, image: Any) -> str:
+        """
+        Run OCR on a single image and return extracted text.
+        Currently not implemented.
+        """
+        raise NotImplementedError("OCR is not implemented yet.")
+
+
+⸻
+
+2. document_processing.py (text + tables + chunking)
+
+# document_processing.py
+
+import os
+from pathlib import Path
+from typing import List, Tuple, Dict
+
+import fitz  # PyMuPDF
+import tabula
+import docx  # python-docx
+
+
+def is_pdf(path: str) -> bool:
+    return str(path).lower().endswith(".pdf")
+
+
+def is_docx(path: str) -> bool:
+    return str(path).lower().endswith(".docx")
+
+
+def _remove_common_headers_footers(page_texts: List[str]) -> List[str]:
+    """
+    Very simple heuristic to remove repeated headers/footers across pages.
+    - Collect first and last lines of each page
+    - If a line appears on many pages, treat it as header/footer and strip it
+    """
+    from collections import Counter
+
+    first_lines = []
+    last_lines = []
+
+    per_page_lines = []
+
+    for text in page_texts:
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        per_page_lines.append(lines)
+        if len(lines) >= 1:
+            first_lines.append(lines[0])
+        if len(lines) >= 2:
+            last_lines.append(lines[-1])
+
+    header_candidates = [ln for ln, cnt in Counter(first_lines).items()
+                         if cnt >= max(2, int(0.6 * len(page_texts)))]
+    footer_candidates = [ln for ln, cnt in Counter(last_lines).items()
+                         if cnt >= max(2, int(0.6 * len(page_texts)))]
+
+    header_set = set(header_candidates)
+    footer_set = set(footer_candidates)
+
+    cleaned_pages = []
+    for lines in per_page_lines:
+        if not lines:
+            cleaned_pages.append("")
+            continue
+        # Remove header if present
+        if lines and lines[0] in header_set:
+            lines = lines[1:]
+        # Remove footer if present
+        if lines and lines[-1] in footer_set:
+            lines = lines[:-1]
+        cleaned_pages.append("\n".join(lines))
+
+    return cleaned_pages
+
+
+def _extract_text_from_pdf(pdf_path: str) -> str:
+    doc = fitz.open(pdf_path)
+    per_page_texts = []
+
+    for page in doc:
+        text = page.get_text("text")
+        per_page_texts.append(text)
+
+    cleaned_pages = _remove_common_headers_footers(per_page_texts)
+    full_text = "\n\n".join(cleaned_pages)
+    return full_text
+
+
+def _extract_tables_from_pdf(pdf_path: str) -> List[str]:
+    """
+    Use tabula-py to extract tables as dataframes, then convert to text.
+    """
+    try:
+        dfs = tabula.read_pdf(
+            pdf_path,
+            pages="all",
+            multiple_tables=True,
+            lattice=True  # often better for structured tables
+        )
+    except Exception as e:
+        print(f"[WARN] Table extraction failed for {pdf_path}: {e}")
+        return []
+
+    tables_as_text = []
+    for idx, df in enumerate(dfs):
+        # Convert dataframe to a readable text format (e.g., TSV-like)
+        table_str = df.to_csv(sep="\t", index=False)
+        tables_as_text.append(f"TABLE {idx + 1}:\n{table_str}")
+
+    return tables_as_text
+
+
+def _extract_text_from_docx(docx_path: str) -> str:
+    document = docx.Document(docx_path)
+    paragraphs = [p.text for p in document.paragraphs if p.text.strip()]
+    full_text = "\n\n".join(paragraphs)
+    return full_text
+
+
+def _extract_tables_from_docx(docx_path: str) -> List[str]:
+    document = docx.Document(docx_path)
+    tables_text = []
+    for t_idx, table in enumerate(document.tables):
+        rows_text = []
+        for row in table.rows:
+            cell_texts = [cell.text.replace("\n", " ").strip() for cell in row.cells]
+            rows_text.append("\t".join(cell_texts))
+        table_str = "\n".join(rows_text)
+        tables_text.append(f"TABLE {t_idx + 1}:\n{table_str}")
+    return tables_text
+
+
+def extract_text_and_tables(document_path: str) -> Tuple[str, List[str]]:
+    """
+    Unified function to extract text and tables from PDF or DOCX.
+
+    Returns:
+        full_text: str
+        tables_as_text: List[str]
+    """
+    if is_pdf(document_path):
+        text = _extract_text_from_pdf(document_path)
+        tables = _extract_tables_from_pdf(document_path)
+    elif is_docx(document_path):
+        text = _extract_text_from_docx(document_path)
+        tables = _extract_tables_from_docx(document_path)
+    else:
+        raise ValueError(f"Unsupported file type: {document_path}")
+    return text, tables
+
+
+def chunk_text(
+    text: str,
+    tables: List[str],
+    max_tokens: int = 512,
+    overlap_tokens: int = 50,
+) -> List[Dict]:
+    """
+    Very simple whitespace-token based chunking.
+    - You can later replace this with tokenizer-based chunking.
+
+    Returns a list of chunks:
+        [{"chunk_id": int, "text": str}, ...]
+    """
+    # Combine tables into text form so they are searchable
+    if tables:
+        tables_block = "\n\n".join([f"[TABLE]\n{t}" for t in tables])
+        text = text + "\n\n" + tables_block
+
+    words = text.split()
+    if not words:
+        return []
+
+    chunks = []
+    start = 0
+    chunk_id = 0
+
+    while start < len(words):
+        end = start + max_tokens
+        chunk_words = words[start:end]
+        chunk_text = " ".join(chunk_words)
+        chunks.append(
+            {
+                "chunk_id": chunk_id,
+                "text": chunk_text,
+            }
+        )
+        chunk_id += 1
+        # Move with overlap
+        start = end - overlap_tokens
+        if start < 0:
+            start = 0
+
+    return chunks
+
+
+def process_document_to_chunks(document_path: str) -> List[Dict]:
+    """
+    High-level helper:
+    - Extract text + tables
+    - Chunk them
+    """
+    text, tables = extract_text_and_tables(document_path)
+    chunks = chunk_text(text, tables)
+    return chunks
+
+
+⸻
+
+3. rag_index.py (FAISS index, embeddings, incremental updates)
+
+# rag_index.py
+
+import json
+import os
+from pathlib import Path
+from typing import List, Dict, Any, Optional, Tuple
+
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+
+class RAGIndex:
+    """
+    Handles:
+    - Loading embedding model (E5)
+    - Building / loading FAISS index
+    - Adding documents (chunks) incrementally
+    - Marking old document versions inactive
+    - Searching for relevant chunks
+    - Persisting index + metadata to disk
+    """
+
+    def __init__(
+        self,
+        embedding_model_name: str,
+        index_dir: str = "./rag_index",
+        use_gpu: bool = True,
+    ) -> None:
+        self.index_dir = Path(index_dir)
+        self.index_dir.mkdir(parents=True, exist_ok=True)
+
+        self.index_path = self.index_dir / "faiss.index"
+        self.metadata_path = self.index_dir / "metadata.json"
+
+        device = "cuda" if use_gpu else "cpu"
+        self.embed_model = SentenceTransformer(embedding_model_name, device=device)
+
+        self.dim = self.embed_model.get_sentence_embedding_dimension()
+
+        # Initialize or load FAISS index
+        if self.index_path.exists():
+            print(f"[INFO] Loading existing FAISS index from {self.index_path}")
+            self.index = faiss.read_index(str(self.index_path))
+        else:
+            print("[INFO] Creating new FAISS IndexFlatIP + IDMap")
+            base_index = faiss.IndexFlatIP(self.dim)
+            self.index = faiss.IndexIDMap(base_index)
+
+        # Initialize or load metadata
+        if self.metadata_path.exists():
+            with open(self.metadata_path, "r", encoding="utf-8") as f:
+                self.metadata = json.load(f)
+        else:
+            self.metadata = {
+                "next_vector_id": 0,
+                "vectors": {}  # str(id) -> metadata dict
+            }
+
+        # If index type is not IDMap, wrap it
+        if not isinstance(self.index, faiss.IndexIDMap):
+            print("[WARN] Loaded index is not IndexIDMap; wrapping in IDMap.")
+            base = self.index
+            new_index = faiss.IndexIDMap(base)
+            self.index = new_index
+
+    # ---------- Persistence utilities ----------
+
+    def _save_index_and_metadata(self) -> None:
+        faiss.write_index(self.index, str(self.index_path))
+        with open(self.metadata_path, "w", encoding="utf-8") as f:
+            json.dump(self.metadata, f, ensure_ascii=False, indent=2)
+        print("[INFO] Saved FAISS index and metadata.")
+
+    def _get_next_ids(self, n: int) -> np.ndarray:
+        start = self.metadata["next_vector_id"]
+        ids = np.arange(start, start + n, dtype="int64")
+        self.metadata["next_vector_id"] = int(start + n)
+        return ids
+
+    # ---------- Document management ----------
+
+    def add_document(
+        self,
+        doc_id: str,
+        doc_path: str,
+        chunks: List[Dict[str, Any]],
+    ) -> None:
+        """
+        Add a new document's chunks to the index.
+        doc_id: logical ID (e.g., "policy_v1")
+        doc_path: filesystem path
+        chunks: list of {"chunk_id": int, "text": str}
+        """
+
+        if not chunks:
+            print(f"[WARN] No chunks to index for {doc_path}")
+            return
+
+        texts = [c["text"] for c in chunks]
+        print(f"[INFO] Embedding {len(texts)} chunks for doc_id={doc_id} ...")
+        embeddings = self.embed_model.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=True,  # for cosine similarity via inner product
+            batch_size=32,
+            show_progress_bar=True,
+        )
+
+        # Get new FAISS IDs
+        ids = self._get_next_ids(len(texts))
+
+        # Add to FAISS
+        embeddings = embeddings.astype("float32")
+        self.index.add_with_ids(embeddings, ids)
+
+        # Add to metadata
+        for faiss_id, chunk in zip(ids, chunks):
+            self.metadata["vectors"][str(int(faiss_id))] = {
+                "doc_id": doc_id,
+                "doc_path": str(doc_path),
+                "chunk_id": int(chunk["chunk_id"]),
+                "text": chunk["text"],
+                "is_active": True,
+            }
+
+        self._save_index_and_metadata()
+
+    def mark_document_inactive(self, doc_id: str) -> None:
+        """
+        Logically deactivate all chunks belonging to a given doc_id.
+        We don't delete from FAISS (complex), but we ignore inactive entries at search time.
+        """
+        count = 0
+        for vid, meta in self.metadata["vectors"].items():
+            if meta["doc_id"] == doc_id and meta.get("is_active", True):
+                meta["is_active"] = False
+                count += 1
+        if count > 0:
+            print(f"[INFO] Marked {count} vectors as inactive for doc_id={doc_id}")
+            self._save_index_and_metadata()
+        else:
+            print(f"[INFO] No active vectors found for doc_id={doc_id}")
+
+    def replace_document(
+        self,
+        doc_id: str,
+        new_doc_path: str,
+        new_chunks: List[Dict[str, Any]],
+    ) -> None:
+        """
+        Replace an existing document version:
+        - mark old vectors for doc_id as inactive
+        - add new chunks as a new version (same doc_id)
+        """
+        print(f"[INFO] Replacing document doc_id={doc_id}")
+        self.mark_document_inactive(doc_id)
+        self.add_document(doc_id, new_doc_path, new_chunks)
+
+    # ---------- Search ----------
+
+    def search(
+        self,
+        query: str,
+        top_k: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """
+        Perform vector search and return top_k active chunks with similarity scores.
+
+        Returns: List[{"score": float, "doc_id": str, "doc_path": str,
+                       "chunk_id": int, "text": str}]
+        """
+        if self.index.ntotal == 0:
+            print("[WARN] Index is empty. No results.")
+            return []
+
+        # Embed query
+        query_emb = self.embed_model.encode(
+            [query],
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            batch_size=1,
+            show_progress_bar=False,
+        ).astype("float32")
+
+        # FAISS search
+        scores, ids = self.index.search(query_emb, top_k * 3)  # search more, then filter inactive
+        scores = scores[0]
+        ids = ids[0]
+
+        results: List[Dict[str, Any]] = []
+
+        for score, vid in zip(scores, ids):
+            if vid == -1:
+                continue
+            meta = self.metadata["vectors"].get(str(int(vid)))
+            if not meta:
+                continue
+            if not meta.get("is_active", True):
+                # skip inactive
+                continue
+            results.append(
+                {
+                    "score": float(score),
+                    "doc_id": meta["doc_id"],
+                    "doc_path": meta["doc_path"],
+                    "chunk_id": meta["chunk_id"],
+                    "text": meta["text"],
+                }
+            )
+            if len(results) >= top_k:
+                break
+
+        return results
+
+
+⸻
+
+4. rag_chatbot.py (full RAG chatbot with conversation, precision, restrictions)
+
+# rag_chatbot.py
+
+import os
+from pathlib import Path
+from typing import List, Dict, Any
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
+from document_processing import process_document_to_chunks
+from rag_index import RAGIndex
+
+
+class RAGChatbot:
+    """
+    End-to-end RAG chatbot:
+    - uses RAGIndex for retrieval
+    - uses local LLaMA model for generation
+    - keeps conversation history
+    - default precise answers, 'elaborate' => detailed
+    - refuses to answer outside-doc questions
+    """
+
+    def __init__(
+        self,
+        llama_model_path: str,
+        embedding_model_name: str = "intfloat/e5-large-v2",
+        index_dir: str = "./rag_index",
+        use_gpu: bool = True,
+        similarity_threshold: float = 0.3,
+    ) -> None:
+
+        self.use_gpu = use_gpu
+        self.similarity_threshold = similarity_threshold
+
+        # 1) RAG index (embeddings + FAISS)
+        self.index = RAGIndex(
+            embedding_model_name=embedding_model_name,
+            index_dir=index_dir,
+            use_gpu=use_gpu,
+        )
+
+        # 2) Load LLaMA model + tokenizer
+        print(f"[INFO] Loading LLaMA model from {llama_model_path}")
+        torch_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+
+        self.tokenizer = AutoTokenizer.from_pretrained(llama_model_path)
+
+        # For very large models, device_map="auto" is usually required
+        self.llama_model = AutoModelForCausalLM.from_pretrained(
+            llama_model_path,
+            torch_dtype=torch_dtype,
+            device_map="auto" if use_gpu else None,
+        )
+
+        self.generator = pipeline(
+            "text-generation",
+            model=self.llama_model,
+            tokenizer=self.tokenizer,
+            # device will be inferred from device_map if using accelerate
+        )
+
+        self.conversation_history: List[Dict[str, str]] = []
+
+    # ---------- Index building / updating ----------
+
+    def build_index_from_documents(
+        self,
+        doc_paths: List[str],
+        overwrite_doc_ids: bool = False,
+    ) -> None:
+        """
+        Build / extend index from a list of document paths.
+        doc_id is derived from file name (without extension).
+        If overwrite_doc_ids == True, old versions will be marked inactive.
+        """
+        for path in doc_paths:
+            path = str(path)
+            doc_id = Path(path).stem  # e.g. "policy_v1"
+            print(f"[INFO] Processing document: {path}, doc_id={doc_id}")
+
+            chunks = process_document_to_chunks(path)
+            if not chunks:
+                print(f"[WARN] No chunks produced for {path}. Skipping.")
+                continue
+
+            if overwrite_doc_ids:
+                # Replace existing doc_id
+                self.index.replace_document(doc_id, path, chunks)
+            else:
+                # Add as new
+                self.index.add_document(doc_id, path, chunks)
+
+    def add_new_document(self, doc_path: str, doc_id: str = None) -> None:
+        """
+        Incrementally add a new document.
+        """
+        if doc_id is None:
+            doc_id = Path(doc_path).stem
+        chunks = process_document_to_chunks(doc_path)
+        self.index.add_document(doc_id, doc_path, chunks)
+
+    def replace_document(self, doc_path: str, doc_id: str) -> None:
+        """
+        Replace existing doc_id with a new version from doc_path.
+        """
+        chunks = process_document_to_chunks(doc_path)
+        self.index.replace_document(doc_id, doc_path, chunks)
+
+    # ---------- Core QA / Chat logic ----------
+
+    @staticmethod
+    def _is_clearly_off_topic(user_input: str) -> bool:
+        """
+        Simple heuristic to block obvious non-RAG uses like jokes, generic coding tasks, etc.
+        You can expand this as needed.
+        """
+        text = user_input.lower()
+        blocked_keywords = [
+            "joke",
+            "poem",
+            "song",
+            "story",
+            "write code",
+            "python code",
+            "c++ code",
+            "java code",
+            "generate code",
+            "standup comedy",
+        ]
+        return any(kw in text for kw in blocked_keywords)
+
+    def _build_prompt(
+        self,
+        user_input: str,
+        retrieved_chunks: List[Dict[str, Any]],
+        elaborate: bool,
+    ) -> str:
+        """
+        Build the prompt for LLaMA with a strict RAG instruction.
+        """
+        # Build context block with simple citations
+        context_blocks = []
+        for r in retrieved_chunks:
+            citation = f"[doc: {Path(r['doc_path']).name}, chunk_id: {r['chunk_id']}]"
+            context_blocks.append(f"{citation}\n{r['text']}")
+        context_text = "\n\n---\n\n".join(context_blocks)
+
+        style_instruction = (
+            "Keep the answer precise (1–3 short paragraphs)."
+            if not elaborate
+            else "Provide a detailed, well-structured answer with clear explanations."
+        )
+
+        system_prompt = (
+            "You are an internal RAG assistant over a set of documents.\n"
+            "You MUST strictly answer ONLY using the information given in the 'Context' section.\n"
+            "If the answer is not clearly supported by the context, respond exactly with:\n"
+            "\"I can only answer questions that are directly supported by the documents.\"\n"
+            "Do NOT use any external knowledge. Do NOT answer unrelated questions.\n"
+            f"{style_instruction}"
+        )
+
+        user_block = (
+            f"User question:\n{user_input}\n\n"
+            f"Context:\n{context_text}\n\n"
+            "Now answer the user question based strictly on the context above."
+        )
+
+        # For instruction-style models, you could adapt to the specific chat template.
+        # Here we simply concatenate.
+        full_prompt = system_prompt + "\n\n" + user_block
+        return full_prompt
+
+    def _generate_answer(
+        self,
+        prompt: str,
+        max_new_tokens: int = 256,
+    ) -> str:
+        """
+        Run the LLaMA model to generate an answer.
+        """
+        outputs = self.generator(
+            prompt,
+            max_new_tokens=max_new_tokens,
+            temperature=0.2,
+            do_sample=False,
+            eos_token_id=self.tokenizer.eos_token_id,
+        )
+        full_text = outputs[0]["generated_text"]
+        # Remove the prompt prefix if the pipeline returns it
+        if full_text.startswith(prompt):
+            answer = full_text[len(prompt):].strip()
+        else:
+            answer = full_text.strip()
+        return answer
+
+    def answer(self, user_input: str) -> str:
+        """
+        Main interface for answering a single user query.
+        Handles:
+        - off-topic blocking
+        - retrieval
+        - context gating with similarity threshold
+        - concise vs elaborate
+        - conversation history tracking
+        """
+        # 1) Check off-topic
+        if self._is_clearly_off_topic(user_input):
+            return (
+                "I can only answer questions that are directly supported by the documents. "
+                "This interface is not intended for jokes, generic coding tasks, or unrelated topics."
+            )
+
+        # 2) Determine style (precise vs elaborate)
+        text_lower = user_input.lower()
+        elaborate = "elaborate" in text_lower
+        # Default: precise; so elaborate=False unless explicitly requested
+
+        # 3) Retrieval
+        retrieved = self.index.search(user_input, top_k=5)
+
+        if not retrieved:
+            return (
+                "I can only answer questions that are directly supported by the documents, "
+                "and I couldn’t find any relevant information for this query."
+            )
+
+        # enforce similarity threshold (with normalized embeddings + IP, this ~= cosine)
+        best_score = retrieved[0]["score"]
+        if best_score < self.similarity_threshold:
+            return (
+                "I can only answer questions that are directly supported by the documents, "
+                "and the retrieved content is not similar enough to your query."
+            )
+
+        # 4) Build prompt and generate answer
+        prompt = self._build_prompt(user_input, retrieved, elaborate=elaborate)
+
+        max_new_tokens = 256 if not elaborate else 768
+        answer_text = self._generate_answer(prompt, max_new_tokens=max_new_tokens)
+
+        # 5) Append simple citation info at the end (post-processing)
+        doc_hits = {}
+        for r in retrieved:
+            name = Path(r["doc_path"]).name
+            doc_hits.setdefault(name, set()).add(r["chunk_id"])
+        sources_str_parts = []
+        for name, chunk_ids in doc_hits.items():
+            sorted_ids = sorted(list(chunk_ids))
+            sources_str_parts.append(
+                f"{name} (chunks {', '.join(str(cid) for cid in sorted_ids)})"
+            )
+        sources_str = "; ".join(sources_str_parts)
+        answer_text += f"\n\nSources: {sources_str}"
+
+        # 6) Update conversation history
+        self.conversation_history.append({"role": "user", "content": user_input})
+        self.conversation_history.append({"role": "assistant", "content": answer_text})
+
+        return answer_text
+
+    # ---------- Simple CLI loop ----------
+
+    def chat_loop(self) -> None:
+        """
+        Simple command-line loop so you can talk to the RAG chatbot.
+        Type 'exit' or 'quit' to stop.
+        """
+        print("RAG chatbot started. Type 'exit' to quit.")
+        while True:
+            try:
+                user_input = input("You: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\n[INFO] Exiting chat.")
+                break
+
+            if user_input.lower() in {"exit", "quit"}:
+                print("[INFO] Exiting chat.")
+                break
+
+            answer = self.answer(user_input)
+            print(f"Bot: {answer}\n")
+
+
+# ---------- Example usage entrypoint ----------
+
+if __name__ == "__main__":
+    # Adjust these paths to your environment
+    LLAMA_MODEL_PATH = "/path/to/your/local/llama-3.1-70b-instruct"
+    EMBEDDING_MODEL_NAME = "intfloat/e5-large-v2"
+    INDEX_DIR = "./rag_index"
+
+    # List your initial documents (PDF / DOCX). You can scan a directory.
+    DOCS_DIR = "./docs"  # folder where you keep your PDFs / DOCX
+    doc_paths = []
+    if os.path.isdir(DOCS_DIR):
+        for fname in os.listdir(DOCS_DIR):
+            if fname.lower().endswith((".pdf", ".docx")):
+                doc_paths.append(os.path.join(DOCS_DIR, fname))
+
+    chatbot = RAGChatbot(
+        llama_model_path=LLAMA_MODEL_PATH,
+        embedding_model_name=EMBEDDING_MODEL_NAME,
+        index_dir=INDEX_DIR,
+        use_gpu=True,
+        similarity_threshold=0.3,
+    )
+
+    # Build index if needed (first run). On subsequent runs, the index will be loaded.
+    if doc_paths:
+        # If you want to overwrite existing doc_ids with same name: overwrite_doc_ids=True
+        chatbot.build_index_from_documents(doc_paths, overwrite_doc_ids=False)
+
+    # Start interactive chat
+    chatbot.chat_loop()
+
+
+⸻
+
+How this matches everything you asked for
+	•	✅ Local models only: both E5 and LLaMA paths are local; you just point to your existing folders.
+	•	✅ GPU usage: SentenceTransformer(..., device="cuda") and device_map="auto" + bfloat16 for LLaMA.
+	•	✅ PDF with tables: tabula-py used for tables; text via PyMuPDF; headers/footers stripped heuristically.
+	•	✅ DOCX future support: already handled in document_processing.py.
+	•	✅ Image extraction separated: image_processing.py is standalone, ready to be wired in later.
+	•	✅ Chunking + embeddings + FAISS: RAGIndex with IndexIDMap and JSON metadata.
+	•	✅ Index saved and reloadable: FAISS + metadata written to disk; no need to re-index every time.
+	•	✅ Incremental updates: add_new_document + replace_document with logical “inactive” old vectors.
+	•	✅ Only answer from docs: strict system prompt, similarity threshold, off-topic keyword filter, and hard fallback messages.
+	•	✅ Precise by default, “elaborate” on request: handled in answer() + different max_new_tokens.
+	•	✅ Chatbot with context: conversation history stored; you can extend to feed history into prompt if you want later.
+	•	✅ Citations: appended at the end as Sources: filename (chunks …) based on retrieved chunks.
+
+You can now drop these four files into a project, adjust the model/doc paths, install dependencies, and start iterating.
+
+If you want, next step we can customize:
+	•	how chunking works (token-based instead of whitespace)
+	•	how much conversation history to include in the prompt
+	•	a small FastAPI / Flask wrapper to expose this as an HTTP endpoint or UI.
