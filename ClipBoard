@@ -1,2 +1,229 @@
-The document verification models are trained and tested on non-static datasets containing over 500K document images, including 90K forgery samples.
-Data sources comprise both synthetic and real transactional documents, ensuring diverse and representative training coverage.
+Short answer: YES — it is absolutely possible, and given your background (data scientist + MRM leader), Python is the more powerful and future-proof option, while Power BI is great for manager-friendly consumption.
+The best architecture is actually Python → Power BI.
+
+Below is a clean, production-grade way to think about this, not a toy example.
+
+⸻
+
+1️⃣ Your data model (what you already have)
+
+You essentially have a wide binary capacity matrix:
+
+Project	Person	2024-01-01	2024-01-08	2024-01-15	…
+A	John	1	1	0	
+A	Mary	1	0	0	
+B	John	0	1	1	
+
+Key facts:
+	•	Each date column = 1 week
+	•	1 = engaged, 0 = free
+	•	Same project appears multiple times (one per person)
+
+This is perfectly workable, but wide format is bad for analytics.
+
+⸻
+
+2️⃣ First principle: reshape to LONG format (critical)
+
+In Python, you must melt this into:
+
+Project	Person	Week	Engaged
+A	John	2024-01-01	1
+A	John	2024-01-08	1
+A	John	2024-01-15	0
+
+This unlocks everything.
+
+⸻
+
+3️⃣ Python stack (best-in-class)
+
+Core tools
+
+Purpose	Tool
+Data manipulation	pandas
+Time logic	datetime / pandas offsets
+Capacity calc	groupby + rolling
+Visualization	Plotly (interactive)
+App layer	Streamlit or Dash
+
+This gives you:
+	•	Filters
+	•	Sliders (X → Y week)
+	•	Real-time ranking
+	•	Drill-downs
+
+⸻
+
+4️⃣ Capacity logic (exactly what you asked)
+
+Step A — Load & reshape
+
+import pandas as pd
+
+df = pd.read_excel("capacity.xlsx")
+
+week_cols = df.columns[2:]
+
+long_df = df.melt(
+    id_vars=["Project", "Person"],
+    value_vars=week_cols,
+    var_name="Week",
+    value_name="Engaged"
+)
+
+long_df["Week"] = pd.to_datetime(long_df["Week"])
+
+
+⸻
+
+Step B — Define new project window
+
+start_week = pd.to_datetime("2024-03-04")
+end_week   = pd.to_datetime("2024-04-15")
+
+
+⸻
+
+Step C — Compute engagement per person
+
+window_df = long_df[
+    (long_df["Week"] >= start_week) &
+    (long_df["Week"] <= end_week)
+]
+
+capacity = (
+    window_df
+    .groupby("Person")["Engaged"]
+    .sum()
+    .reset_index()
+)
+
+capacity["Free_Weeks"] = (
+    window_df["Week"].nunique() - capacity["Engaged"]
+)
+
+capacity = capacity.sort_values("Engaged")
+
+✅ This gives you exactly what you want:
+	•	People sorted from least engaged → most engaged
+	•	Who has continuous free windows
+	•	Who is overloaded
+
+⸻
+
+5️⃣ Detect “empty slot” (continuous availability)
+
+This is where Python beats Power BI.
+
+def has_free_slot(df, start, end):
+    weeks = pd.date_range(start, end, freq="7D")
+    status = df.set_index("Week").reindex(weeks, fill_value=0)
+    return status["Engaged"].sum() == 0
+
+availability = (
+    long_df.groupby("Person")
+    .apply(has_free_slot, start_week, end_week)
+    .reset_index(name="Fully_Free")
+)
+
+Now you can answer:
+
+“Who is completely free between X and Y?”
+
+⸻
+
+6️⃣ Interactive visualization (THIS is the wow factor)
+
+Option A — Streamlit app (recommended)
+
+You get:
+	•	Week range slider
+	•	Person ranking
+	•	Heatmap
+	•	Drilldown by person
+
+Example:
+
+import streamlit as st
+import plotly.express as px
+
+st.title("Capacity Planning Tool")
+
+selected = st.slider(
+    "Select weeks",
+    min_value=long_df["Week"].min().date(),
+    max_value=long_df["Week"].max().date(),
+    value=(start_week.date(), end_week.date())
+)
+
+fig = px.bar(
+    capacity,
+    x="Engaged",
+    y="Person",
+    orientation="h",
+    title="Engagement by Person"
+)
+
+st.plotly_chart(fig)
+
+
+⸻
+
+Option B — Power BI (executive-friendly)
+
+Best approach:
+	1.	Do ALL logic in Python
+	2.	Output long format CSV
+	3.	Load into Power BI
+
+Power BI visuals:
+	•	Matrix (Person × Week)
+	•	Heatmap
+	•	Decomposition Tree (great for managers)
+	•	Slicers for week range
+
+⚠️ Power BI cannot easily detect continuous free windows. Python can.
+
+⸻
+
+7️⃣ Best practice architecture (real-world)
+
+Excel (Input)
+   ↓
+Python (Capacity Engine)
+   ↓
+Clean Long CSV
+   ↓
+Power BI (Visualization)
+
+This is:
+	•	Scalable
+	•	Auditable
+	•	Easy to extend (skills, % allocation, cost)
+
+⸻
+
+8️⃣ Extensions you’ll likely want next
+
+Given your profile, next logical upgrades:
+	•	Partial allocation (0.25, 0.5, 1)
+	•	Skill tags per person
+	•	Auto-recommend top 3 candidates
+	•	Conflict alerts
+	•	Scenario comparison
+
+⸻
+
+🎯 Final recommendation
+	•	YES it’s absolutely possible
+	•	Python is mandatory for correct capacity logic
+	•	Power BI is optional for presentation
+
+If you want, next I can:
+	•	Build a ready-to-run Streamlit app
+	•	Design the exact Power BI model
+	•	Add skill-based matching
+	•	Convert this into a manager self-serve tool
+
+Just tell me which direction you want to go.
